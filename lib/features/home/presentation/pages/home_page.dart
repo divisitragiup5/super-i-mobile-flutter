@@ -72,7 +72,20 @@ class HomePage extends StatelessWidget {
           body: BlocBuilder<AuthBloc, AuthState>(
             builder: (context, state) {
               if (state is! AuthAuthenticated) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      TextButton.icon(
+                        icon: const Icon(Icons.login),
+                        label: const Text('Ke Halaman Login'),
+                        onPressed: () => context.go(AppRoutes.login),
+                      ),
+                    ],
+                  ),
+                );
               }
 
               final user = state.user;
@@ -187,7 +200,7 @@ class HomePage extends StatelessWidget {
                                   ? Container(
                                       padding: const EdgeInsets.all(20),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.9),
+                                        color: Colors.white.withValues(alpha: 0.9),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: const Center(

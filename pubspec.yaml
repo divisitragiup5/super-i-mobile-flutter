@@ -49,6 +49,17 @@ dependencies:
   intl: ^0.20.3
   flutter_svg: ^2.3.2
   flutter_dotenv: ^6.0.1
+  camera: ^0.12.2
+  google_mlkit_face_detection: ^0.15.1
+  geolocator: ^14.0.1
+  flutter_local_notifications: ^22.3.3
+  timezone: ^0.11.2
+  permission_handler: ^13.0.2
+  image: ^4.12.0
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
+  flutter_face_liveness: ^3.7.1
+  tflite_flutter: ^0.12.1
 
 dev_dependencies:
   flutter_test:
@@ -76,6 +87,7 @@ flutter:
     - .env
     - assets/icons/
     - assets/images/
+    - assets/models/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -1,14 +1,35 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/absen/presentation/pages/absen_page.dart';
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/auth/presentation/bloc/auth_state.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/main/presentation/pages/main_scaffold.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
+import '../../features/absen/presentation/pages/absen_processing_page.dart';
+import '../../features/absen/domain/entities/absen_location_entity.dart';
 import '../di/injection_container.dart';
-import '../storage/secure_storage_service.dart';
 import 'route_constants.dart';
+
+/// Helper untuk menghubungkan Stream (Bloc) ke Listenable GoRouter
+class GoRouterRefreshStream extends ChangeNotifier {
+  late final StreamSubscription<dynamic> _subscription;
+
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
 
 class AppRouter {
   AppRouter._();
@@ -19,26 +40,32 @@ class AppRouter {
   static final GoRouter router = GoRouter(
     navigatorKey: navigatorKey,
     initialLocation: AppRoutes.splash,
+    refreshListenable: GoRouterRefreshStream(sl<AuthBloc>().stream),
     debugLogDiagnostics: true,
 
-    redirect: (BuildContext context, GoRouterState state) async {
-      final secureStorage = sl<SecureStorageService>();
-      final token = await secureStorage.getAccessToken();
-
-      final bool isLoggedIn = token != null && token.isNotEmpty;
-      final bool isGoingToLogin = state.matchedLocation == AppRoutes.login;
+    redirect: (BuildContext context, GoRouterState state) {
+      final authState = sl<AuthBloc>().state;
       final bool isGoingToSplash = state.matchedLocation == AppRoutes.splash;
+      final bool isGoingToLogin = state.matchedLocation == AppRoutes.login;
 
+      // Izinkan SplashPage menampilkan animasinya
       if (isGoingToSplash) return null;
 
-      if (!isLoggedIn && !isGoingToLogin) {
-        return AppRoutes.login;
+      if (authState is AuthAuthenticated) {
+        if (isGoingToLogin) {
+          return AppRoutes.home;
+        }
+        return null;
       }
 
-      if (isLoggedIn && isGoingToLogin) {
-        return AppRoutes.home;
+      if (authState is AuthUnauthenticated || authState is AuthFailureState) {
+        if (!isGoingToLogin) {
+          return AppRoutes.login;
+        }
+        return null;
       }
 
+      // Jika masih AuthInitial atau AuthLoading di luar splash, tahan route saat ini
       return null;
     },
 
@@ -81,6 +108,22 @@ class AppRouter {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.absen,
+        builder: (context, state) => const AbsenPage(),
+      ),
+      // Rute Pemrosesan Absensi (Liveness & Review)
+      GoRoute(
+        path: AppRoutes.absenProcessing,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return AbsenProcessingPage(
+            type: extra['type'] as String? ?? 'MASUK',
+            shiftData: extra['dataShift'] as Map<String, dynamic>?,
+            absenLocation: extra['absenLocation'] as AbsenLocationEntity?,
+          );
+        },
       ),
     ],
 

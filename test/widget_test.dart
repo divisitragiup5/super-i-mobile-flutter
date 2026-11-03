@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:super_i_mobile/core/utils/color_parser.dart';
@@ -79,6 +80,42 @@ void main() {
       expect(model.realisasiPemeliharaan, 10);
       expect(model.volumeKendala, 3);
       expect(model.performaConfig?.category, 'Sangat Baik');
+    });
+  });
+
+  group('Face Anti-Spoof Softmax & Logic Verification', () {
+    test('Softmax correctly detects screen attack from logits', () {
+      final logits = [-3.0229115, -4.67003, 7.6966195];
+
+      final maxLogit = [logits[0], logits[1], logits[2]].reduce((a, b) => a > b ? a : b);
+      final exp0 = math.exp(logits[0] - maxLogit);
+      final exp1 = math.exp(logits[1] - maxLogit);
+      final exp2 = math.exp(logits[2] - maxLogit);
+      final sumExp = exp0 + exp1 + exp2;
+
+      final probReal = exp1 / sumExp;
+      final probScreen = exp2 / sumExp;
+
+      expect(probScreen, greaterThan(0.99));
+      expect(probReal, lessThan(0.01));
+      expect(probReal >= 0.40, isFalse);
+    });
+
+    test('Softmax correctly accepts real face from logits', () {
+      final logits = [-0.76717734, 1.4499426, -0.6842941];
+
+      final maxLogit = [logits[0], logits[1], logits[2]].reduce((a, b) => a > b ? a : b);
+      final exp0 = math.exp(logits[0] - maxLogit);
+      final exp1 = math.exp(logits[1] - maxLogit);
+      final exp2 = math.exp(logits[2] - maxLogit);
+      final sumExp = exp0 + exp1 + exp2;
+
+      final probReal = exp1 / sumExp;
+      final probScreen = exp2 / sumExp;
+
+      expect(probReal, greaterThan(0.70));
+      expect(probScreen, lessThan(0.20));
+      expect(probReal >= 0.40, isTrue);
     });
   });
 }

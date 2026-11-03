@@ -10,4 +10,5 @@ class AppRoutes {
   // Rute-rute fitur selanjutnya bisa didaftarkan di sini
   static const String profile = '/profile';
   static const String absen = '/absen';
+  static const String absenProcessing = '/absen-processing';
 }

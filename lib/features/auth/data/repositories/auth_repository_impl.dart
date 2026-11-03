@@ -1,21 +1,28 @@
+import 'dart:convert';
+
 import 'package:fpdart/fpdart.dart';
 
+import '../../../../core/constants/storage_constants.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/network_info.dart';
+import '../../../../core/storage/preferences_service.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_data_source.dart';
+import '../models/user_model.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final SecureStorageService secureStorage;
+  final PreferencesService preferencesService;
   final NetworkInfo networkInfo;
 
   AuthRepositoryImpl({
     required this.remoteDataSource,
     required this.secureStorage,
+    required this.preferencesService,
     required this.networkInfo,
   });
 
@@ -39,6 +46,12 @@ class AuthRepositoryImpl implements AuthRepository {
       // 4. Ambil profil lengkap petugas
       final userModel = await remoteDataSource.getUserProfile();
 
+      // 5. Simpan cache profil user untuk keperluan offline di lapangan
+      await preferencesService.setString(
+        StorageConstants.userProfile,
+        jsonEncode(userModel.toJson()),
+      );
+
       return Right(userModel);
     } on ServerException catch (e) {
       return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
@@ -51,26 +64,72 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, UserEntity>> getCurrentUser() async {
-    if (!await networkInfo.isConnected) {
-      return const Left(NetworkFailure());
+    final token = await secureStorage.getAccessToken();
+    if (token == null || token.isEmpty) {
+      await _clearSession();
+      return const Left(AuthFailure(message: 'Sesi belum ada atau telah berakhir.'));
     }
 
-    try {
-      final userModel = await remoteDataSource.getUserProfile();
-      return Right(userModel);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
-    } on UnauthorizedException catch (e) {
-      return Left(AuthFailure(message: e.message));
-    } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+    final isConnected = await networkInfo.isConnected;
+    if (isConnected) {
+      try {
+        final userModel = await remoteDataSource.getUserProfile();
+        // Update cache offline dengan data terbaru
+        await preferencesService.setString(
+          StorageConstants.userProfile,
+          jsonEncode(userModel.toJson()),
+        );
+        return Right(userModel);
+      } on UnauthorizedException catch (e) {
+        // Token hangus di server (401)
+        await _clearSession();
+        return Left(AuthFailure(message: e.message));
+      } catch (e) {
+        // Jika server error atau timeout, coba ambil dari cache offline
+        final cached = _getCachedUser();
+        if (cached != null) {
+          return Right(cached);
+        }
+        return Left(ServerFailure(message: e.toString()));
+      }
+    } else {
+      // Offline mode: Ambil dari cache lokal jika pernah login
+      final cached = _getCachedUser();
+      if (cached != null) {
+        return Right(cached);
+      }
+      return const Left(
+        NetworkFailure(message: 'Tidak ada koneksi internet dan sesi lokal belum tersedia.'),
+      );
     }
+  }
+
+  UserModel? _getCachedUser() {
+    final raw = preferencesService.getString(StorageConstants.userProfile);
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final map = jsonDecode(raw) as Map<String, dynamic>;
+        return UserModel.fromJson(map);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  Future<void> _clearSession() async {
+    try {
+      await secureStorage.deleteAccessToken();
+    } catch (_) {}
+    try {
+      await preferencesService.remove(StorageConstants.userProfile);
+    } catch (_) {}
   }
 
   @override
   Future<Either<Failure, void>> logout() async {
     try {
-      await secureStorage.deleteAccessToken();
+      await _clearSession();
       return const Right(null);
     } catch (e) {
       return const Left(

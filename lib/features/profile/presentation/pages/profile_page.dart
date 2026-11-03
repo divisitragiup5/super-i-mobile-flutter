@@ -52,7 +52,20 @@ class ProfilePage extends StatelessWidget {
         body: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
             if (state is! AuthAuthenticated) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    TextButton.icon(
+                      icon: const Icon(Icons.login),
+                      label: const Text('Ke Halaman Login'),
+                      onPressed: () => context.go(AppRoutes.login),
+                    ),
+                  ],
+                ),
+              );
             }
 
             final user = state.user;
@@ -140,7 +153,7 @@ class ProfilePage extends StatelessWidget {
                       _buildSectionHeader('DATA PRIBADI'),
                       const SizedBox(height: 8),
                       Card(
-                        color: Colors.white.withOpacity(0.92),
+                        color: Colors.white.withValues(alpha: 0.92),
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
@@ -164,7 +177,7 @@ class ProfilePage extends StatelessWidget {
                       _buildSectionHeader('PENGATURAN'),
                       const SizedBox(height: 8),
                       Card(
-                        color: Colors.white.withOpacity(0.92),
+                        color: Colors.white.withValues(alpha: 0.92),
                         child: ListTile(
                           leading: const Icon(
                             Icons.lock_outline,
@@ -204,7 +217,7 @@ class ProfilePage extends StatelessWidget {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(

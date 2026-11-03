@@ -54,10 +54,10 @@ class _SplashPageState extends State<SplashPage>
         Future.delayed(const Duration(milliseconds: 1500), () {
           if (!mounted) return;
           if (state is AuthAuthenticated) {
-            context.go(AppRoutes.home);
+            if (context.mounted) context.go(AppRoutes.home);
           } else if (state is AuthUnauthenticated ||
               state is AuthFailureState) {
-            context.go(AppRoutes.login);
+            if (context.mounted) context.go(AppRoutes.login);
           }
         });
       },

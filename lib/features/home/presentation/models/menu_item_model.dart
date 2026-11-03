@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/role_constants.dart';
-import '../../../../core/router/route_constants.dart';
 
 class MenuItemModel {
   final String label;
@@ -145,7 +144,8 @@ class MenuItemModel {
     MenuItemModel(
       label: 'Absen',
       icon: Icons.how_to_reg_outlined,
-      route: AppRoutes.absen,
+      // route: AppRoutes.absen,
+      route: '/absen',
       allowedRoles: [
         AppRoles.operatorGi20kv,
         AppRoles.operatorGi150kv,

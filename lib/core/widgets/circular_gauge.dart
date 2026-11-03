@@ -83,7 +83,7 @@ class _GaugePainter extends CustomPainter {
 
     // Track latar belakang abu-abu
     final trackPaint = Paint()
-      ..color = Colors.black.withOpacity(0.08)
+      ..color = Colors.black.withValues(alpha: 0.08)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;

@@ -23,6 +23,16 @@ import '../storage/local_database.dart';
 import '../storage/preferences_service.dart';
 import '../storage/secure_storage_service.dart';
 
+import '../services/notification_service.dart';
+import '../services/permission_service.dart';
+
+import '../../features/absen/data/datasources/absen_remote_data_source.dart';
+import '../../features/absen/data/repositories/absen_repository_impl.dart';
+import '../../features/absen/domain/repositories/absen_repository.dart';
+import '../../features/absen/presentation/cubit/absen_info_cubit.dart';
+
+import '../../features/absen/presentation/cubit/absen_submit_cubit.dart';
+
 final sl = GetIt.instance;
 
 Future<void> initDependencies() async {
@@ -84,6 +94,7 @@ Future<void> initDependencies() async {
     () => AuthRepositoryImpl(
       remoteDataSource: sl<AuthRemoteDataSource>(),
       secureStorage: sl<SecureStorageService>(),
+      preferencesService: sl<PreferencesService>(),
       networkInfo: sl<NetworkInfo>(),
     ),
   );
@@ -123,5 +134,30 @@ Future<void> initDependencies() async {
 
   sl.registerFactory<SutmPemeliharaanScoreCubit>(
     () => SutmPemeliharaanScoreCubit(repository: sl<HomeSummaryRepository>()),
+  );
+
+  sl.registerLazySingleton<PermissionService>(() => PermissionService());
+  sl.registerLazySingleton<NotificationService>(() => NotificationService());
+
+  // ─────────────────────────────────────────────────────────────
+  // 6. FEATURES: ABSENSI (PRESENSI LAPANGAN)
+  // ─────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<AbsenRemoteDataSource>(
+    () => AbsenRemoteDataSourceImpl(dioClient: sl<DioClient>()),
+  );
+
+  sl.registerLazySingleton<AbsenRepository>(
+    () => AbsenRepositoryImpl(remoteDataSource: sl<AbsenRemoteDataSource>()),
+  );
+
+  sl.registerFactory<AbsenInfoCubit>(
+    () => AbsenInfoCubit(
+      repository: sl<AbsenRepository>(),
+      permissionService: sl<PermissionService>(),
+    ),
+  );
+
+  sl.registerFactory(
+    () => AbsenSubmitCubit(repository: sl(), notificationService: sl()),
   );
 }

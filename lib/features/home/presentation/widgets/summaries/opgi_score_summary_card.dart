@@ -22,7 +22,7 @@ class _OpgiScoreSummaryCardState extends State<OpgiScoreSummaryCard> {
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.82),
+            color: Colors.white.withValues(alpha: 0.82),
             borderRadius: BorderRadius.circular(16),
             boxShadow: const [
               BoxShadow(
