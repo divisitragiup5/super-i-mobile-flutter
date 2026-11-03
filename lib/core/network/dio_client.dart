@@ -99,8 +99,16 @@ class DioClient {
     String errorMessage = 'Terjadi kesalahan pada server.';
 
     if (responseData is Map<String, dynamic>) {
-      errorMessage =
-          responseData['message'] ?? responseData['error'] ?? errorMessage;
+      final messageVal = responseData['message'];
+      if (messageVal is String && messageVal.isNotEmpty) {
+        errorMessage = messageVal;
+      } else if (messageVal is List && messageVal.isNotEmpty) {
+        errorMessage = messageVal.map((e) => e.toString()).join('\n');
+      } else if (responseData['error'] is String) {
+        errorMessage = responseData['error'] as String;
+      }
+    } else if (responseData is String && responseData.isNotEmpty) {
+      errorMessage = responseData;
     }
 
     return ServerException(message: errorMessage, statusCode: statusCode);

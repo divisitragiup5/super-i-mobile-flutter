@@ -24,8 +24,14 @@ class AbsenSubmitCubit extends Cubit<AbsenSubmitState> {
     required List<Map<String, dynamic>> faceProps,
     String? address,
     Map<String, dynamic>? shiftData,
+    Map<String, dynamic>? extraData,
   }) async {
     emit(AbsenSubmitLoading());
+
+    // Filter extraData to ensure internal/local shift fields are never sent
+    final Map<String, dynamic>? sanitizedExtraData = extraData != null
+        ? (Map<String, dynamic>.from(extraData)..remove('shift')..remove('dataShift'))
+        : null;
 
     final result = await repository.submitAbsen(
       type: type,
@@ -35,13 +41,16 @@ class AbsenSubmitCubit extends Cubit<AbsenSubmitState> {
       failedAttempt: failedAttempt,
       faceProps: faceProps,
       address: address,
-      extraData: shiftData,
+      extraData: sanitizedExtraData,
     );
 
     result.fold((failure) => emit(AbsenSubmitError(failure.message)), (
       data,
     ) async {
-      final message = (data['message'] as String?) ?? 'Absen berhasil diproses';
+      final msgRaw = data['message'];
+      final String message = msgRaw is String
+          ? msgRaw
+          : (msgRaw is List ? msgRaw.join('\n') : 'Absen berhasil diproses');
 
       // Kelola Notifikasi Clock Out otomatis
       if (type == 'MASUK') {

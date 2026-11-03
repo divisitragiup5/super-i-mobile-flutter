@@ -52,26 +52,44 @@ class AbsenRemoteDataSourceImpl implements AbsenRemoteDataSource {
     Map<String, dynamic>? extraData,
   }) async {
     try {
+      final payloadData = <String, dynamic>{
+        'timezone': 'Asia/Jakarta',
+        'type': type,
+        'latitude': latitude,
+        'longitude': longitude,
+        'failedAttempt': failedAttempt,
+        'face': faceProps,
+        'picture': {
+          'date': DateTime.now().toUtc().toIso8601String(),
+          'latitude': latitude,
+          'longitude': longitude,
+          if (address != null && address.isNotEmpty) 'address': address,
+        },
+      };
+
+      if (extraData != null) {
+        const allowedExtraKeys = {
+          'premi',
+          'alasanPremiOff',
+          'alasanPremiOn',
+          'izin',
+          'diagnosaSakit',
+          'premiOnInfo',
+          'shifts',
+        };
+        for (final entry in extraData.entries) {
+          if (allowedExtraKeys.contains(entry.key)) {
+            payloadData[entry.key] = entry.value;
+          }
+        }
+      }
+
       final formData = FormData.fromMap({
         'files': await MultipartFile.fromFile(
           pictureFile.path,
           filename: 'picture.jpg',
         ),
-        'data': jsonEncode({
-          'timezone': 'Asia/Jakarta',
-          'type': type,
-          'latitude': latitude,
-          'longitude': longitude,
-          'failedAttempt': failedAttempt,
-          'face': faceProps,
-          'picture': {
-            'date': DateTime.now().toUtc().toIso8601String(),
-            'latitude': latitude,
-            'longitude': longitude,
-            'address': ?address,
-          },
-          ...?extraData,
-        }),
+        'data': jsonEncode(payloadData),
       });
 
       final response = await dioClient.dio.post(
