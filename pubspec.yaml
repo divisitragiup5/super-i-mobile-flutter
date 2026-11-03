@@ -60,6 +60,7 @@ dependencies:
   latlong2: ^0.10.1
   flutter_face_liveness: ^3.7.1
   tflite_flutter: ^0.12.1
+  image_picker: ^1.2.4
 
 dev_dependencies:
   flutter_test:

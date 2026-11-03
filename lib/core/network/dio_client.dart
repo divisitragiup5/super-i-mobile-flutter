@@ -113,4 +113,68 @@ class DioClient {
 
     return ServerException(message: errorMessage, statusCode: statusCode);
   }
+
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await dio.get<T>(path, queryParameters: queryParameters, options: options);
+    } on DioException catch (e) {
+      throw handleError(e);
+    }
+  }
+
+  Future<Response<T>> post<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await dio.post<T>(path, data: data, queryParameters: queryParameters, options: options);
+    } on DioException catch (e) {
+      throw handleError(e);
+    }
+  }
+
+  Future<Response<T>> patch<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await dio.patch<T>(path, data: data, queryParameters: queryParameters, options: options);
+    } on DioException catch (e) {
+      throw handleError(e);
+    }
+  }
+
+  Future<Response<T>> delete<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await dio.delete<T>(path, data: data, queryParameters: queryParameters, options: options);
+    } on DioException catch (e) {
+      throw handleError(e);
+    }
+  }
+
+  Future<Response<T>> put<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await dio.put<T>(path, data: data, queryParameters: queryParameters, options: options);
+    } on DioException catch (e) {
+      throw handleError(e);
+    }
+  }
 }

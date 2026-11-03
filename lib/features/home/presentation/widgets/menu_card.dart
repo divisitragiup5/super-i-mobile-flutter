@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_snackbar.dart';
 import '../models/menu_item_model.dart';
 
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/router/route_constants.dart';
 
 class MenuCard extends StatelessWidget {
   final MenuItemModel item;
@@ -23,13 +21,13 @@ class MenuCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () {
-          if (item.route == AppRoutes.absen) {
-            context.push(item.route);
-          } else {
-            AppSnackbar.showInfo(
-              context,
-              'Modul ${item.label} akan dibangun di tahap berikutnya.',
+          if (item.params != null && item.params!.isNotEmpty) {
+            context.push(
+              item.route,
+              extra: item.params,
             );
+          } else {
+            context.push(item.route);
           }
         },
         child: Padding(

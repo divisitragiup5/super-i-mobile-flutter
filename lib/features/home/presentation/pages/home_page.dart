@@ -12,6 +12,7 @@ import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../../core/di/injection_container.dart';
 import '../cubit/sutm_inspeksi_score_cubit.dart';
 import '../cubit/sutm_pemeliharaan_score_cubit.dart';
+import '../../../notification/presentation/cubit/notification_cubit.dart';
 import '../models/menu_item_model.dart';
 import '../widgets/home_header.dart';
 import '../widgets/menu_card.dart';
@@ -60,6 +61,9 @@ class HomePage extends StatelessWidget {
         ),
         BlocProvider(
           create: (_) => sl<SutmPemeliharaanScoreCubit>()..fetchScore(),
+        ),
+        BlocProvider(
+          create: (_) => sl<NotificationCubit>()..fetchUnreadCount(),
         ),
       ],
       child: BlocListener<AuthBloc, AuthState>(
@@ -123,6 +127,7 @@ class HomePage extends StatelessWidget {
                             context.read<AuthBloc>().add(AuthCheckRequested());
                             context.read<SutmInspeksiScoreCubit>().fetchScore();
                             context.read<SutmPemeliharaanScoreCubit>().fetchScore();
+                            context.read<NotificationCubit>().fetchUnreadCount();
                           },
                           child: SingleChildScrollView(
                             physics: const AlwaysScrollableScrollPhysics(),
@@ -178,7 +183,10 @@ class HomePage extends StatelessWidget {
                                   child: SutmPemeliharaanScoreCard(),
                                 ),
 
-                              // ─── 6. MENU OPERASIONAL DINAMIS ───
+                              // ─── 6. DRAFT OFFLINE LAPANGAN ───
+                              const OfflineDraftsCard(),
+
+                              // ─── 7. MENU OPERASIONAL DINAMIS ───
                               const Text(
                                 'Menu Operasional',
                                 style: TextStyle(

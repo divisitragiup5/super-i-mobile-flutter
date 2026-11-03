@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/route_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_button.dart';
-import '../../../../core/widgets/app_snackbar.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
@@ -192,10 +191,7 @@ class ProfilePage extends StatelessWidget {
                             color: AppColors.textSecondary,
                           ),
                           onTap: () {
-                            AppSnackbar.showInfo(
-                              context,
-                              'Halaman Ubah Password segera hadir.',
-                            );
+                            context.push(AppRoutes.ubahPassword);
                           },
                         ),
                       ),

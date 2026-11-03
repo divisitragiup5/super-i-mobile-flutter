@@ -13,8 +13,8 @@ class ApiConstants {
   static const Duration receiveTimeout = Duration(seconds: 30);
   static const Duration sendTimeout = Duration(seconds: 30);
 
-  // Endpoints Autentikasi
+  // Endpoints Autentikasi & User
   static const String login = '/auth/login-mobile';
   static const String userMe = '/data/user/me';
-  static const String changePassword = '/change-password';
+  static const String changePassword = '/data/user/password';
 }

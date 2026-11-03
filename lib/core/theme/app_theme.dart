@@ -7,6 +7,18 @@ import 'app_typography.dart';
 class AppTheme {
   AppTheme._();
 
+  static const Color primary = AppColors.primary;
+  static const Color primaryDark = AppColors.primaryDark;
+  static const Color primaryLight = AppColors.primaryLight;
+  static const Color secondary = AppColors.secondary;
+  static const Color danger = AppColors.danger;
+  static const Color error = AppColors.danger;
+  static const Color success = AppColors.success;
+  static const Color warning = AppColors.warning;
+  static const Color border = AppColors.border;
+  static const Color textPrimary = AppColors.textPrimary;
+  static const Color textSecondary = AppColors.textSecondary;
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,

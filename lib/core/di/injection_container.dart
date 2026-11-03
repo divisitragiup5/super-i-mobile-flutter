@@ -32,6 +32,53 @@ import '../../features/absen/domain/repositories/absen_repository.dart';
 import '../../features/absen/presentation/cubit/absen_info_cubit.dart';
 
 import '../../features/absen/presentation/cubit/absen_submit_cubit.dart';
+import '../../features/ubah_password/data/datasources/ubah_password_remote_data_source.dart';
+import '../../features/ubah_password/data/repositories/ubah_password_repository_impl.dart';
+import '../../features/ubah_password/domain/repositories/ubah_password_repository.dart';
+import '../../features/ubah_password/presentation/cubit/ubah_password_cubit.dart';
+import '../../features/notification/data/datasources/notification_remote_data_source.dart';
+import '../../features/notification/data/repositories/notification_repository_impl.dart';
+import '../../features/notification/domain/repositories/notification_repository.dart';
+import '../../features/notification/presentation/cubit/notification_cubit.dart';
+import '../../features/riwayat_absen/data/datasources/riwayat_absen_remote_data_source.dart';
+import '../../features/riwayat_absen/data/repositories/riwayat_absen_repository_impl.dart';
+import '../../features/riwayat_absen/domain/repositories/riwayat_absen_repository.dart';
+import '../../features/riwayat_absen/presentation/cubit/riwayat_absen_cubit.dart';
+import '../../features/data_shift/data/datasources/data_shift_remote_data_source.dart';
+import '../../features/data_shift/data/repositories/data_shift_repository_impl.dart';
+import '../../features/data_shift/domain/repositories/data_shift_repository.dart';
+import '../../features/data_shift/presentation/cubit/data_shift_cubit.dart';
+import '../../features/history_penilaian/data/datasources/history_penilaian_remote_data_source.dart';
+import '../../features/history_penilaian/data/repositories/history_penilaian_repository_impl.dart';
+import '../../features/history_penilaian/domain/repositories/history_penilaian_repository.dart';
+import '../../features/history_penilaian/presentation/cubit/history_penilaian_cubit.dart';
+import '../../features/line_walker/data/datasources/line_walker_remote_data_source.dart';
+import '../../features/line_walker/data/repositories/line_walker_repository_impl.dart';
+import '../../features/line_walker/domain/repositories/line_walker_repository.dart';
+import '../../features/line_walker/presentation/cubit/waterpass_cubit.dart';
+import '../../features/line_walker/presentation/cubit/pembumian_cubit.dart';
+import '../../features/line_walker/presentation/cubit/ppl_cubit.dart';
+import '../../features/line_walker/presentation/cubit/ketenagakerjaan_cubit.dart';
+import '../../features/line_walker/presentation/cubit/kegiatan_sosial_cubit.dart';
+
+import '../../features/distribusi/data/datasources/sutm_remote_data_source.dart';
+import '../../features/distribusi/data/repositories/sutm_repository_impl.dart';
+import '../../features/distribusi/domain/repositories/sutm_repository.dart';
+import '../../features/distribusi/presentation/cubit/wo_inspeksi_cubit.dart';
+import '../../features/distribusi/presentation/cubit/inspeksi_form_cubit.dart';
+import '../../features/distribusi/presentation/cubit/validasi_inspeksi_cubit.dart';
+import '../../features/distribusi/presentation/cubit/wo_pemeliharaan_cubit.dart';
+import '../../features/distribusi/presentation/cubit/pemeliharaan_form_cubit.dart';
+import '../../features/distribusi/presentation/cubit/yantek_cubit.dart';
+
+import '../../features/opgi/data/datasources/opgi_remote_data_source.dart';
+import '../../features/opgi/data/repositories/opgi_repository_impl.dart';
+import '../../features/opgi/domain/repositories/opgi_repository.dart';
+import '../../features/opgi/presentation/cubit/gardu_induk_cubit.dart';
+import '../../features/opgi/presentation/cubit/opgi_realisasi_cubit.dart';
+import '../../features/opgi/presentation/cubit/opgi_manuver_cubit.dart';
+import '../../features/opgi/presentation/cubit/opgi_anomali_cubit.dart';
+import '../../features/opgi/presentation/cubit/opgi_il1_cubit.dart';
 
 final sl = GetIt.instance;
 
@@ -159,5 +206,148 @@ Future<void> initDependencies() async {
 
   sl.registerFactory(
     () => AbsenSubmitCubit(repository: sl(), notificationService: sl()),
+  );
+
+  // ─────────────────────────────────────────────────────────────
+  // 7. FEATURES: UBAH PASSWORD
+  // ─────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<UbahPasswordRemoteDataSource>(
+    () => UbahPasswordRemoteDataSourceImpl(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<UbahPasswordRepository>(
+    () => UbahPasswordRepositoryImpl(sl<UbahPasswordRemoteDataSource>()),
+  );
+  sl.registerFactory<UbahPasswordCubit>(
+    () => UbahPasswordCubit(sl<UbahPasswordRepository>()),
+  );
+
+  // ─────────────────────────────────────────────────────────────
+  // 8. FEATURES: NOTIFIKASI
+  // ─────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<NotificationRemoteDataSource>(
+    () => NotificationRemoteDataSourceImpl(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<NotificationRepository>(
+    () => NotificationRepositoryImpl(sl<NotificationRemoteDataSource>()),
+  );
+  sl.registerFactory<NotificationCubit>(
+    () => NotificationCubit(sl<NotificationRepository>()),
+  );
+
+  // ─── Riwayat Absen ───
+  sl.registerLazySingleton<RiwayatAbsenRemoteDataSource>(
+    () => RiwayatAbsenRemoteDataSourceImpl(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<RiwayatAbsenRepository>(
+    () => RiwayatAbsenRepositoryImpl(sl<RiwayatAbsenRemoteDataSource>()),
+  );
+  sl.registerFactory<RiwayatAbsenCubit>(
+    () => RiwayatAbsenCubit(sl<RiwayatAbsenRepository>()),
+  );
+  sl.registerFactory<UploadDokumenCubit>(
+    () => UploadDokumenCubit(sl<RiwayatAbsenRepository>()),
+  );
+
+  // ─── Data Shift ───
+  sl.registerLazySingleton<DataShiftRemoteDataSource>(
+    () => DataShiftRemoteDataSourceImpl(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<DataShiftRepository>(
+    () => DataShiftRepositoryImpl(sl<DataShiftRemoteDataSource>()),
+  );
+  sl.registerFactory<DataShiftCubit>(
+    () => DataShiftCubit(sl<DataShiftRepository>()),
+  );
+
+  // ─── History Penilaian ───
+  sl.registerLazySingleton<HistoryPenilaianRemoteDataSource>(
+    () => HistoryPenilaianRemoteDataSourceImpl(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<HistoryPenilaianRepository>(
+    () => HistoryPenilaianRepositoryImpl(sl<HistoryPenilaianRemoteDataSource>()),
+  );
+  sl.registerFactory<HistoryPenilaianCubit>(
+    () => HistoryPenilaianCubit(sl<HistoryPenilaianRepository>()),
+  );
+  sl.registerFactory<DetailHistoryPenilaianCubit>(
+    () => DetailHistoryPenilaianCubit(sl<HistoryPenilaianRepository>()),
+  );
+
+  // ─── Line Walker ───
+  sl.registerLazySingleton<LineWalkerRemoteDataSource>(
+    () => LineWalkerRemoteDataSourceImpl(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<LineWalkerRepository>(
+    () => LineWalkerRepositoryImpl(sl<LineWalkerRemoteDataSource>()),
+  );
+  sl.registerFactory<WaterpassCubit>(
+    () => WaterpassCubit(sl<LineWalkerRepository>()),
+  );
+  sl.registerFactory<PembumianCubit>(
+    () => PembumianCubit(sl<LineWalkerRepository>()),
+  );
+  sl.registerFactory<PplCubit>(
+    () => PplCubit(sl<LineWalkerRepository>()),
+  );
+  sl.registerFactory<KetenagakerjaanCubit>(
+    () => KetenagakerjaanCubit(sl<LineWalkerRepository>()),
+  );
+  sl.registerFactory<KegiatanSosialCubit>(
+    () => KegiatanSosialCubit(sl<LineWalkerRepository>()),
+  );
+
+  // ─────────────────────────────────────────────────────────────
+  // 10. FEATURES: DISTRIBUSI SUTM
+  // ─────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<SutmRemoteDataSource>(
+    () => SutmRemoteDataSourceImpl(apiClient: sl<DioClient>()),
+  );
+  sl.registerLazySingleton<SutmRepository>(
+    () => SutmRepositoryImpl(remoteDataSource: sl<SutmRemoteDataSource>()),
+  );
+
+  sl.registerFactory<WoInspeksiCubit>(
+    () => WoInspeksiCubit(repository: sl<SutmRepository>()),
+  );
+  sl.registerFactory<InspeksiFormCubit>(
+    () => InspeksiFormCubit(repository: sl<SutmRepository>()),
+  );
+  sl.registerFactory<ValidasiInspeksiCubit>(
+    () => ValidasiInspeksiCubit(repository: sl<SutmRepository>()),
+  );
+  sl.registerFactory<WoPemeliharaanCubit>(
+    () => WoPemeliharaanCubit(repository: sl<SutmRepository>()),
+  );
+  sl.registerFactory<PemeliharaanFormCubit>(
+    () => PemeliharaanFormCubit(repository: sl<SutmRepository>()),
+  );
+  sl.registerFactory<YantekCubit>(
+    () => YantekCubit(repository: sl<SutmRepository>()),
+  );
+
+  // ─────────────────────────────────────────────────────────────
+  // 11. FEATURES: OPGI 20kV
+  // ─────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<OpgiRemoteDataSource>(
+    () => OpgiRemoteDataSourceImpl(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<OpgiRepository>(
+    () => OpgiRepositoryImpl(sl<OpgiRemoteDataSource>()),
+  );
+
+  sl.registerFactory<GarduIndukCubit>(
+    () => GarduIndukCubit(sl<OpgiRepository>()),
+  );
+  sl.registerFactory<OpgiRealisasiCubit>(
+    () => OpgiRealisasiCubit(sl<OpgiRepository>()),
+  );
+  sl.registerFactory<OpgiManuverCubit>(
+    () => OpgiManuverCubit(sl<OpgiRepository>()),
+  );
+  sl.registerFactory<OpgiAnomaliCubit>(
+    () => OpgiAnomaliCubit(sl<OpgiRepository>()),
+  );
+  sl.registerFactory<OpgiIl1Cubit>(
+    () => OpgiIl1Cubit(sl<OpgiRepository>()),
   );
 }

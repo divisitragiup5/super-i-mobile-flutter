@@ -1,9 +1,14 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/router/route_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/domain/entities/user_entity.dart';
+import '../../../notification/presentation/cubit/notification_cubit.dart';
+import '../../../notification/presentation/cubit/notification_state.dart';
 
 class HomeHeader extends StatelessWidget {
   final UserEntity user;
@@ -68,6 +73,61 @@ class HomeHeader extends StatelessWidget {
               ),
             ),
 
+            // Notification Bell with Badge
+            BlocBuilder<NotificationCubit, NotificationState>(
+              builder: (context, state) {
+                final unreadCount =
+                    (state is NotificationLoaded) ? state.unreadCount : 0;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.notifications_outlined,
+                        color: Colors.white,
+                      ),
+                      tooltip: 'Notifikasi',
+                      onPressed: () async {
+                        await context.push(AppRoutes.notification);
+                        if (context.mounted) {
+                          context.read<NotificationCubit>().fetchUnreadCount();
+                        }
+                      },
+                    ),
+                    if (unreadCount > 0)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            unreadCount > 99 ? '99+' : '$unreadCount',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              height: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+
             // Live Network Status Indicator (Online/Offline)
             StreamBuilder<List<ConnectivityResult>>(
               stream: Connectivity().onConnectivityChanged,
@@ -112,7 +172,7 @@ class HomeHeader extends StatelessWidget {
                 );
               },
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
 
             // Tombol Logout
             IconButton(

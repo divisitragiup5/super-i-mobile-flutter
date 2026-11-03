@@ -15,13 +15,18 @@ class CircularGauge extends StatelessWidget {
 
   const CircularGauge({
     super.key,
-    required this.progress,
-    this.radius = 65,
+    double? progress,
+    double? score,
+    double? radius,
+    double? size,
     this.strokeWidth = 12,
     this.color = AppColors.primaryLight,
-    this.centerLabel,
+    String? centerLabel,
+    String? label,
     this.showPercent = false,
-  });
+  })  : progress = progress ?? score ?? 0.0,
+        radius = radius ?? (size != null ? size / 2 : 65),
+        centerLabel = centerLabel ?? label;
 
   @override
   Widget build(BuildContext context) {
