@@ -1,14 +1,16 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
-import 'package:path_provider/path_provider.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_input_label.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/field_pict_input.dart';
 import '../../../../core/widgets/field_signature_pad.dart';
 import '../../../../core/widgets/searchable_dropdown.dart';
+import '../../../home/presentation/cubit/drafts_cubit.dart';
 import '../../data/models/kegiatan_sosial_model.dart';
 import '../../data/models/tower_asset_model.dart';
 import '../cubit/kegiatan_sosial_cubit.dart';
@@ -30,16 +32,16 @@ class KegiatanSosialFormPage extends StatefulWidget {
 class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
   TowerAssetModel? _selectedTower;
 
-  String _jenisAktivitas = 'LAYANG-LAYANG';
-  String _statusAktivitas = 'MASIH BERLANGSUNG';
-  String _progresPenanganan = 'SWEEPING';
-  String _tindakan = 'SUDAH DIEKSEKUSI';
+  String? _jenisAktivitas;
+  String? _statusAktivitas;
+  String? _progresPenanganan;
+  String? _tindakan;
   final TextEditingController _keteranganCtrl = TextEditingController();
-  String _statusObjek = 'PERMANEN';
+  String? _statusObjek;
   final TextEditingController _pelakuAktivitasCtrl = TextEditingController();
   final TextEditingController _tanggapanCtrl = TextEditingController();
 
-  String _temuan = 'TIDAK ADA TEMUAN';
+  String? _temuan;
   final TextEditingController _jumlahTemuanCtrl = TextEditingController();
 
   final TextEditingController _lokasiCtrl = TextEditingController();
@@ -55,12 +57,27 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
   File? _ttdTLGI;
   final TextEditingController _namaTTDTLGICtrl = TextEditingController();
 
+  String _identifier = '';
+  bool _isPartialDisabled = false;
+
   @override
   void initState() {
     super.initState();
+    final rawId = widget.initialDraft?['identifier']?.toString();
+    _identifier = (rawId != null && rawId.isNotEmpty)
+        ? rawId
+        : 'sosial-${DateTime.now().millisecondsSinceEpoch}';
+    _isPartialDisabled = widget.initialDraft?['partialDisabled'] == 'true' ||
+        widget.initialDraft?['partialDisabled'] == true;
+
+    _namaTTDTLGICtrl.addListener(_onFieldChanged);
     context.read<KegiatanSosialCubit>().loadTowers();
     _fetchCurrentLocation();
     _loadInitialDraft();
+  }
+
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _fetchCurrentLocation() async {
@@ -79,21 +96,26 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
   void _loadInitialDraft() {
     if (widget.initialDraft != null) {
       final d = widget.initialDraft!;
-      if (d['towerId'] != null) {
-        _selectedTower = TowerAssetModel(
-          id: d['towerId'] as int,
-          nama: d['namaTower']?.toString() ?? 'Tower',
-        );
+      if (d['towerId'] != null || d['tower'] != null || d['namaTower'] != null) {
+        final tId = d['towerId'] ?? (d['tower'] is Map ? d['tower']['id'] : null);
+        final tNama = d['namaTower'] ?? (d['tower'] is Map ? d['tower']['nama'] : null) ?? 'Tower';
+        if (tId != null) {
+          final parsedId = tId is int ? tId : int.tryParse('$tId') ?? 0;
+          _selectedTower = TowerAssetModel(
+            id: parsedId,
+            nama: tNama.toString(),
+          );
+        }
       }
-      _jenisAktivitas = d['jenisAktivitas'] ?? 'LAYANG-LAYANG';
-      _statusAktivitas = d['statusAktivitas'] ?? 'MASIH BERLANGSUNG';
-      _progresPenanganan = d['progresPenanganan'] ?? 'SWEEPING';
-      _tindakan = d['tindakan'] ?? 'SUDAH DIEKSEKUSI';
+      _jenisAktivitas = d['jenisAktivitas']?.toString();
+      _statusAktivitas = d['statusAktivitas']?.toString();
+      _progresPenanganan = d['progresPenanganan']?.toString();
+      _tindakan = d['tindakan']?.toString();
       _keteranganCtrl.text = d['keterangan'] ?? '';
-      _statusObjek = d['statusObjek'] ?? 'PERMANEN';
+      _statusObjek = d['statusObjek']?.toString();
       _pelakuAktivitasCtrl.text = d['pelakuAktivitasSosial'] ?? '';
       _tanggapanCtrl.text = d['tanggapan'] ?? '';
-      _temuan = d['temuan'] ?? 'TIDAK ADA TEMUAN';
+      _temuan = d['temuan']?.toString();
       if (d['jumlahTemuan'] != null) _jumlahTemuanCtrl.text = d['jumlahTemuan'].toString();
       _lokasiCtrl.text = d['lokasi'] ?? '';
       _latitude = (d['latitude'] as num?)?.toDouble() ?? 0.0;
@@ -112,6 +134,7 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
 
   @override
   void dispose() {
+    _namaTTDTLGICtrl.removeListener(_onFieldChanged);
     _keteranganCtrl.dispose();
     _pelakuAktivitasCtrl.dispose();
     _tanggapanCtrl.dispose();
@@ -122,25 +145,17 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
     super.dispose();
   }
 
-  Future<File> _base64ToFile(String base64Str, String name) async {
-    final cleanBase64 = base64Str.contains(',') ? base64Str.split(',')[1] : base64Str;
-    final bytes = base64Decode(cleanBase64);
-    final tempDir = await getTemporaryDirectory();
-    final file = File('${tempDir.path}/${name}_${DateTime.now().millisecondsSinceEpoch}.png');
-    await file.writeAsBytes(bytes);
-    return file;
-  }
-
   KegiatanSosialInputModel _buildInputModel() {
     return KegiatanSosialInputModel(
       towerId: _selectedTower?.id ?? 0,
       namaTower: _selectedTower?.nama,
-      jenisAktivitas: _jenisAktivitas,
-      statusAktivitas: _statusAktivitas,
-      progresPenanganan: _progresPenanganan,
-      tindakan: _tindakan,
+      identifier: _identifier,
+      jenisAktivitas: _jenisAktivitas ?? '',
+      statusAktivitas: _statusAktivitas ?? '',
+      progresPenanganan: _progresPenanganan ?? '',
+      tindakan: _tindakan ?? '',
       keterangan: _keteranganCtrl.text.trim(),
-      statusObjek: _statusObjek,
+      statusObjek: _statusObjek ?? '',
       pelakuAktivitasSosial: _pelakuAktivitasCtrl.text.trim(),
       tanggapan: _tanggapanCtrl.text.trim(),
       lokasi: _lokasiCtrl.text.trim(),
@@ -152,48 +167,86 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
       namaTTDLineWalker: _namaTTDLineWalkerCtrl.text.trim(),
       ttdTLGI: _ttdTLGI,
       namaTTDTLGI: _namaTTDTLGICtrl.text.isNotEmpty ? _namaTTDTLGICtrl.text.trim() : null,
-      temuan: _temuan,
-      jumlahTemuan: int.tryParse(_jumlahTemuanCtrl.text),
+      temuan: _temuan ?? 'TIDAK ADA TEMUAN',
+      jumlahTemuan: _temuan == 'ADA TEMUAN' ? int.tryParse(_jumlahTemuanCtrl.text.trim()) : null,
     );
   }
 
+  String? _validateForm() {
+    if (_selectedTower == null) {
+      return 'Pilih objek tower terlebih dahulu';
+    }
+    if (_jenisAktivitas == null || _jenisAktivitas!.isEmpty) {
+      return 'Pilih jenis aktivitas terlebih dahulu';
+    }
+    if (_statusAktivitas == null || _statusAktivitas!.isEmpty) {
+      return 'Pilih status aktivitas terlebih dahulu';
+    }
+    if (_progresPenanganan == null || _progresPenanganan!.isEmpty) {
+      return 'Pilih progres penanganan terlebih dahulu';
+    }
+    if (_tindakan == null || _tindakan!.isEmpty) {
+      return 'Pilih tindakan terlebih dahulu';
+    }
+    if (_keteranganCtrl.text.trim().isEmpty) {
+      return 'Keterangan aktivitas wajib diisi';
+    }
+    if (_statusObjek == null || _statusObjek!.isEmpty) {
+      return 'Pilih status objek terlebih dahulu';
+    }
+    if (_pelakuAktivitasCtrl.text.trim().isEmpty) {
+      return 'Pelaku aktivitas sosial wajib diisi';
+    }
+    if (_tanggapanCtrl.text.trim().isEmpty) {
+      return 'Tanggapan wajib diisi';
+    }
+    if (_temuan == null || _temuan!.isEmpty) {
+      return 'Pilih temuan terlebih dahulu';
+    }
+    if (_temuan == 'ADA TEMUAN' && _jumlahTemuanCtrl.text.trim().isEmpty) {
+      return 'Jumlah temuan wajib diisi jika ada temuan';
+    }
+    if (_dokumentasiSosialisasi == null) {
+      return 'Foto dokumentasi sosialisasi wajib diambil';
+    }
+    if (_dokumentasiAktivitasSosial == null) {
+      return 'Foto dokumentasi aktivitas sosial wajib diambil';
+    }
+    if (_namaTTDLineWalkerCtrl.text.trim().isEmpty || _ttdLineWalker == null) {
+      return 'Tanda tangan dan nama Line Walker wajib diisi';
+    }
+    if ((_ttdTLGI != null && _namaTTDTLGICtrl.text.trim().isEmpty) ||
+        (_ttdTLGI == null && _namaTTDTLGICtrl.text.trim().isNotEmpty)) {
+      return 'Lengkapi tanda tangan dan nama Team Leader GI jika diisi';
+    }
+    return null;
+  }
+
   Future<void> _handleSaveDraft() async {
+    final error = _validateForm();
+    if (error != null) {
+      _showError(error);
+      return;
+    }
+
     final input = _buildInputModel();
     await context.read<KegiatanSosialCubit>().saveDraft(input);
+    try {
+      sl<DraftsCubit>().loadDrafts();
+    } catch (_) {}
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Data kegiatan sosial berhasil disimpan sebagai draft offline'),
-          backgroundColor: AppColors.success,
-        ),
+      AppSnackbar.showSuccess(
+        context,
+        'Data kegiatan sosial berhasil disimpan sebagai draft offline',
       );
       context.pop();
     }
   }
 
   void _handleSubmit() {
-    if (_selectedTower == null) {
-      _showError('Pilih objek tower terlebih dahulu');
-      return;
-    }
-    if (_keteranganCtrl.text.trim().isEmpty) {
-      _showError('Keterangan aktivitas wajib diisi');
-      return;
-    }
-    if (_pelakuAktivitasCtrl.text.trim().isEmpty) {
-      _showError('Pelaku aktivitas sosial wajib diisi');
-      return;
-    }
-    if (_tanggapanCtrl.text.trim().isEmpty) {
-      _showError('Tanggapan wajib diisi');
-      return;
-    }
-    if (_temuan == 'ADA TEMUAN' && _jumlahTemuanCtrl.text.trim().isEmpty) {
-      _showError('Jumlah temuan wajib diisi');
-      return;
-    }
-    if (_namaTTDLineWalkerCtrl.text.trim().isEmpty || _ttdLineWalker == null) {
-      _showError('Tanda tangan dan nama Line Walker wajib diisi');
+    final error = _validateForm();
+    if (error != null) {
+      _showError(error);
       return;
     }
 
@@ -202,9 +255,7 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: AppColors.danger),
-    );
+    AppSnackbar.showError(context, message);
   }
 
   @override
@@ -225,22 +276,10 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
       body: BlocConsumer<KegiatanSosialCubit, KegiatanSosialState>(
         listener: (context, state) {
           if (state is KegiatanSosialSubmitSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppColors.success),
-            );
+            AppSnackbar.showSuccess(context, state.message);
             context.pop();
           } else if (state is KegiatanSosialSubmitFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.danger,
-                action: SnackBarAction(
-                  label: 'Simpan Offline',
-                  textColor: Colors.white,
-                  onPressed: _handleSaveDraft,
-                ),
-              ),
-            );
+            AppSnackbar.showError(context, state.message);
           }
         },
         builder: (context, state) {
@@ -248,6 +287,27 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
           List<TowerAssetModel> towers = [];
           if (state is KegiatanSosialLoaded) {
             towers = state.towers;
+            if (_selectedTower != null && (_selectedTower!.nama == 'Tower' || _selectedTower!.nama.isEmpty)) {
+              final matching = towers.where((t) => t.id == _selectedTower!.id).firstOrNull;
+              if (matching != null) {
+                _selectedTower = matching;
+              }
+            }
+          }
+
+          final List<DropdownItem<int>> towerItems = towers
+              .map((t) => DropdownItem<int>(value: t.id, label: t.nama))
+              .toList();
+
+          if (_selectedTower != null &&
+              !towerItems.any((it) => it.value == _selectedTower!.id)) {
+            towerItems.insert(
+              0,
+              DropdownItem<int>(
+                value: _selectedTower!.id,
+                label: _selectedTower!.nama,
+              ),
+            );
           }
 
           return SingleChildScrollView(
@@ -273,27 +333,33 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        SearchableDropdown<int>(
-                          label: 'Tower',
-                          hint: 'Pilih tower...',
-                          isRequired: true,
-                          value: _selectedTower?.id,
-                          items: towers
-                              .map((t) => DropdownItem<int>(value: t.id, label: t.nama))
-                              .toList(),
-                          onChanged: (id) {
-                            if (id != null) {
-                              final tower = towers.firstWhere((t) => t.id == id);
-                              setState(() => _selectedTower = tower);
-                              context.read<KegiatanSosialCubit>().selectTower(tower);
-                            }
-                          },
+                        Opacity(
+                          opacity: _isPartialDisabled ? 0.7 : 1.0,
+                          child: IgnorePointer(
+                            ignoring: _isPartialDisabled,
+                            child: SearchableDropdown<int>(
+                              label: 'Tower',
+                              hint: 'Pilih tower...',
+                              isRequired: true,
+                              isLoading: state is KegiatanSosialLoading || (towers.isEmpty && state is! KegiatanSosialLoaded),
+                              value: _selectedTower?.id,
+                              items: towerItems,
+                              onChanged: (id) {
+                                if (id != null) {
+                                  final tower = towerItems.firstWhere((t) => t.value == id);
+                                  setState(() => _selectedTower = TowerAssetModel(id: tower.value, nama: tower.label));
+                                  context.read<KegiatanSosialCubit>().selectTower(TowerAssetModel(id: tower.value, nama: tower.label));
+                                }
+                              },
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _jenisAktivitas,
+                          initialValue: _jenisAktivitas,
+                          hint: const Text('Pilih jenis aktivitas'),
                           decoration: InputDecoration(
-                            labelText: 'Jenis Aktivitas',
+                            label: const AppInputLabel('Jenis Aktivitas', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           items: const [
@@ -304,14 +370,15 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
                             DropdownMenuItem(value: 'LAIN-LAIN', child: Text('Lain-lain')),
                           ],
                           onChanged: (val) {
-                            if (val != null) setState(() => _jenisAktivitas = val);
+                            setState(() => _jenisAktivitas = val);
                           },
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _statusAktivitas,
+                          initialValue: _statusAktivitas,
+                          hint: const Text('Pilih status aktivitas'),
                           decoration: InputDecoration(
-                            labelText: 'Status Aktivitas',
+                            label: const AppInputLabel('Status Aktivitas', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           items: const [
@@ -320,14 +387,15 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
                             DropdownMenuItem(value: 'BERHENTI', child: Text('Berhenti')),
                           ],
                           onChanged: (val) {
-                            if (val != null) setState(() => _statusAktivitas = val);
+                            setState(() => _statusAktivitas = val);
                           },
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _progresPenanganan,
+                          initialValue: _progresPenanganan,
+                          hint: const Text('Pilih progres penanganan'),
                           decoration: InputDecoration(
-                            labelText: 'Progres Penanganan',
+                            label: const AppInputLabel('Progres Penanganan', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           items: const [
@@ -337,14 +405,15 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
                             DropdownMenuItem(value: 'BELUM TERSOSIALISASI', child: Text('Belum Tersosialisasi')),
                           ],
                           onChanged: (val) {
-                            if (val != null) setState(() => _progresPenanganan = val);
+                            setState(() => _progresPenanganan = val);
                           },
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _tindakan,
+                          initialValue: _tindakan,
+                          hint: const Text('Pilih tindakan'),
                           decoration: InputDecoration(
-                            labelText: 'Tindakan',
+                            label: const AppInputLabel('Tindakan', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           items: const [
@@ -352,22 +421,23 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
                             DropdownMenuItem(value: 'BELUM DIEKSEKUSI', child: Text('Belum Dieksekusi')),
                           ],
                           onChanged: (val) {
-                            if (val != null) setState(() => _tindakan = val);
+                            setState(() => _tindakan = val);
                           },
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _keteranganCtrl,
                           decoration: InputDecoration(
-                            labelText: 'Keterangan Aktivitas *',
+                            label: const AppInputLabel('Keterangan Aktivitas', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _statusObjek,
+                          initialValue: _statusObjek,
+                          hint: const Text('Pilih status objek'),
                           decoration: InputDecoration(
-                            labelText: 'Status Objek',
+                            label: const AppInputLabel('Status Objek', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           items: const [
@@ -376,14 +446,14 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
                             DropdownMenuItem(value: 'SELESAI', child: Text('Selesai')),
                           ],
                           onChanged: (val) {
-                            if (val != null) setState(() => _statusObjek = val);
+                            setState(() => _statusObjek = val);
                           },
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _pelakuAktivitasCtrl,
                           decoration: InputDecoration(
-                            labelText: 'Pelaku Aktivitas Sosial *',
+                            label: const AppInputLabel('Pelaku Aktivitas Sosial', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
@@ -391,15 +461,16 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
                         TextField(
                           controller: _tanggapanCtrl,
                           decoration: InputDecoration(
-                            labelText: 'Tanggapan *',
+                            label: const AppInputLabel('Tanggapan', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _temuan,
+                          initialValue: _temuan,
+                          hint: const Text('Pilih temuan'),
                           decoration: InputDecoration(
-                            labelText: 'Temuan',
+                            label: const AppInputLabel('Temuan', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           items: const [
@@ -407,7 +478,7 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
                             DropdownMenuItem(value: 'ADA TEMUAN', child: Text('Ada Temuan')),
                           ],
                           onChanged: (val) {
-                            if (val != null) setState(() => _temuan = val);
+                            setState(() => _temuan = val);
                           },
                         ),
                         if (_temuan == 'ADA TEMUAN') ...[
@@ -416,19 +487,11 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
                             controller: _jumlahTemuanCtrl,
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
-                              labelText: 'Jumlah Temuan *',
+                              label: const AppInputLabel('Jumlah Temuan', isRequired: true),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             ),
                           ),
                         ],
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _lokasiCtrl,
-                          decoration: InputDecoration(
-                            labelText: 'Lokasi',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -446,6 +509,8 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
                         FieldPictInput(
                           label: 'Dokumentasi Sosialisasi',
                           placeholder: 'Ambil Foto Sosialisasi',
+                          isRequired: true,
+                          forceLandscape: true,
                           pictureFile: _dokumentasiSosialisasi,
                           onChange: (f) => setState(() => _dokumentasiSosialisasi = f),
                         ),
@@ -453,6 +518,8 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
                         FieldPictInput(
                           label: 'Dokumentasi Aktivitas Sosial',
                           placeholder: 'Ambil Foto Aktivitas Sosial',
+                          isRequired: true,
+                          forceLandscape: true,
                           pictureFile: _dokumentasiAktivitasSosial,
                           onChange: (f) => setState(() => _dokumentasiAktivitasSosial = f),
                         ),
@@ -480,40 +547,25 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        _buildSignatureSection(
-                          title: 'Tanda Tangan Line Walker *',
-                          file: _ttdLineWalker,
-                          nameCtrl: _namaTTDLineWalkerCtrl,
-                          nameLabel: 'Nama Lengkap Line Walker *',
-                          onSign: () async {
-                            final base64 = await FieldSignaturePad.show(
-                              context,
-                              title: 'TTD Line Walker',
-                              signerName: _namaTTDLineWalkerCtrl.text,
-                            );
-                            if (base64 != null) {
-                              final f = await _base64ToFile(base64, 'ttdLineWalker');
-                              setState(() => _ttdLineWalker = f);
-                            }
-                          },
+                        // TTD Line Walker
+                        FieldSignatureInput(
+                          label: 'Tanda Tangan Line Walker',
+                          isRequired: true,
+                          signatureFile: _ttdLineWalker,
+                          signerName: _namaTTDLineWalkerCtrl.text,
+                          onSignatureChanged: (file) => setState(() => _ttdLineWalker = file),
+                          onNameChanged: (name) => setState(() => _namaTTDLineWalkerCtrl.text = name),
                         ),
                         const Divider(height: 32),
-                        _buildSignatureSection(
-                          title: 'Tanda Tangan TL GI (Opsional)',
-                          file: _ttdTLGI,
-                          nameCtrl: _namaTTDTLGICtrl,
-                          nameLabel: 'Nama Lengkap TL GI',
-                          onSign: () async {
-                            final base64 = await FieldSignaturePad.show(
-                              context,
-                              title: 'TTD TL GI',
-                              signerName: _namaTTDTLGICtrl.text,
-                            );
-                            if (base64 != null) {
-                              final f = await _base64ToFile(base64, 'ttdTLGI');
-                              setState(() => _ttdTLGI = f);
-                            }
-                          },
+
+                        // TTD TL GI (Opsional)
+                        FieldSignatureInput(
+                          label: 'Tanda Tangan TL GI (Opsional)',
+                          isRequired: false,
+                          signatureFile: _ttdTLGI,
+                          signerName: _namaTTDTLGICtrl.text,
+                          onSignatureChanged: (file) => setState(() => _ttdTLGI = file),
+                          onNameChanged: (name) => setState(() => _namaTTDTLGICtrl.text = name),
                         ),
                       ],
                     ),
@@ -546,48 +598,6 @@ class _KegiatanSosialFormPageState extends State<KegiatanSosialFormPage> {
           );
         },
       ),
-    );
-  }
-
-  Widget _buildSignatureSection({
-    required String title,
-    required File? file,
-    required TextEditingController nameCtrl,
-    required String nameLabel,
-    required VoidCallback onSign,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        TextField(
-          controller: nameCtrl,
-          decoration: InputDecoration(
-            labelText: nameLabel,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (file != null) ...[
-          Container(
-            height: 100,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.white,
-            ),
-            child: Image.file(file, fit: BoxFit.contain),
-          ),
-          const SizedBox(height: 8),
-        ],
-        OutlinedButton.icon(
-          onPressed: onSign,
-          icon: const Icon(Icons.draw_outlined),
-          label: Text(file != null ? 'Ubah Tanda Tangan' : 'Buat Tanda Tangan'),
-        ),
-      ],
     );
   }
 }

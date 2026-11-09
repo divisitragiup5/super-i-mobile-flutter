@@ -2,14 +2,23 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/utils/download_ba_helper.dart';
 import '../models/kegiatan_sosial_model.dart';
 import '../models/ketenagakerjaan_model.dart';
+import '../models/line_walker_performance_model.dart';
 import '../models/pembumian_model.dart';
 import '../models/ppl_model.dart';
 import '../models/tower_asset_model.dart';
 import '../models/waterpass_model.dart';
+import 'package:super_i_mobile/features/home/data/models/ppl_condition_summary_model.dart';
 
 abstract class LineWalkerRemoteDataSource {
+  Future<LineWalkerPerformanceModel?> getMyPerformance({
+    int? minggu,
+    String? bulan,
+    int? tahun,
+  });
+
   Future<List<TowerAssetModel>> getTowers({String type = 'GANTRY,TOWER'});
   
   // Waterpass
@@ -20,6 +29,7 @@ abstract class LineWalkerRemoteDataSource {
   Future<String> submitPembumian(PembumianInputModel input);
   Future<Map<String, dynamic>?> getLastPembumian(int towerId);
   Future<List<PembumianHistoryItemModel>> getPembumianHistory({int cursor = 0, String? search});
+  Future<String> downloadBAPembumian({required int towerId, required int inspectionId, required String towerName});
 
   // PPL
   Future<String> submitPpl(PPLInputModel input);
@@ -28,10 +38,19 @@ abstract class LineWalkerRemoteDataSource {
   Future<List<PPLHistoryItemModel>> getPplHistory({int cursor = 0, String? search, String? type});
   Future<List<PPLHistoryItemModel>> getPplHistoryByIdentifier(String identifier, {int cursor = 0});
   Future<Map<String, dynamic>> getSummaryRiwayatPpl();
+  Future<PplConditionSummaryModel> getPplConditionSummary();
+  Future<String> downloadBAPPL({required int inspectionId, required String towerName});
 
   // Ketenagakerjaan
   Future<List<KetenagakerjaanItemModel>> getSummaryKetenagakerjaan({int cursor = 0, String? search});
   Future<List<KetenagakerjaanItemModel>> getKetenagakerjaanDetail(int id, {int cursor = 0, String? timezone});
+  Future<String> downloadSuratKetenagakerjaan({
+    required int id,
+    required int minggu,
+    required String bulan,
+    required int tahun,
+    required String status,
+  });
 
   // Kegiatan Sosial
   Future<String> submitKegiatanSosial(KegiatanSosialInputModel input);
@@ -45,6 +64,7 @@ abstract class LineWalkerRemoteDataSource {
   Future<Map<String, dynamic>?> getLastKegiatanSosial(int towerId);
   Future<List<KegiatanSosialHistoryItemModel>> getKegiatanSosialHistory({int cursor = 0, String? search});
   Future<List<KegiatanSosialHistoryItemModel>> getKegiatanSosialHistoryByIdentifier(String identifier, {int cursor = 0});
+  Future<String> downloadBAKegiatanSosial({required int inspectionId, required String towerName});
 }
 
 class LineWalkerRemoteDataSourceImpl implements LineWalkerRemoteDataSource {
@@ -300,7 +320,7 @@ class LineWalkerRemoteDataSourceImpl implements LineWalkerRemoteDataSource {
   Future<String> updatePpl({required int id, File? ttdTLGI, String? namaTTDTLGI}) async {
     final Map<String, dynamic> dataMap = {
       'id': id,
-      if (namaTTDTLGI != null) 'namaTTDTLGI': namaTTDTLGI,
+      'namaTTDTLGI': ?namaTTDTLGI,
     };
 
     final formData = FormData();
@@ -361,6 +381,13 @@ class LineWalkerRemoteDataSourceImpl implements LineWalkerRemoteDataSource {
   Future<Map<String, dynamic>> getSummaryRiwayatPpl() async {
     final response = await _dioClient.dio.get('/gama/line-walker/ppl/summary-ppl-history');
     return response.data['data'] as Map<String, dynamic>? ?? {};
+  }
+
+  @override
+  Future<PplConditionSummaryModel> getPplConditionSummary() async {
+    final response = await _dioClient.dio.get('/gama/line-walker/ppl/condition-summary');
+    final data = response.data['data'] as Map<String, dynamic>? ?? {};
+    return PplConditionSummaryModel.fromJson(data);
   }
 
   // --- Ketenagakerjaan ---
@@ -454,8 +481,8 @@ class LineWalkerRemoteDataSourceImpl implements LineWalkerRemoteDataSource {
   }) async {
     final Map<String, dynamic> dataMap = {
       'id': id,
-      if (namaTTDTLGI != null) 'namaTTDTLGI': namaTTDTLGI,
-      if (namaTTDLineWalker != null) 'namaTTDLineWalker': namaTTDLineWalker,
+      'namaTTDTLGI': ?namaTTDTLGI,
+      'namaTTDLineWalker': ?namaTTDLineWalker,
     };
 
     final formData = FormData();
@@ -516,4 +543,144 @@ class LineWalkerRemoteDataSourceImpl implements LineWalkerRemoteDataSource {
     final items = response.data['data']?['items'] as List? ?? [];
     return items.map((e) => KegiatanSosialHistoryItemModel.fromJson(e as Map<String, dynamic>)).toList();
   }
+
+  @override
+  Future<LineWalkerPerformanceModel?> getMyPerformance({
+    int? minggu,
+    String? bulan,
+    int? tahun,
+  }) async {
+    final Map<String, dynamic> query = {};
+    if (minggu != null) query['minggu'] = minggu;
+    if (bulan != null && bulan.isNotEmpty) query['bulan'] = bulan;
+    if (tahun != null) query['tahun'] = tahun;
+
+    final response = await _dioClient.dio.get(
+      '/gama/line-walker/arsakha/my-performance',
+      queryParameters: query.isNotEmpty ? query : null,
+    );
+
+    dynamic raw = response.data;
+    if (raw is String) {
+      if (raw.trim().isEmpty) return null;
+      try {
+        raw = jsonDecode(raw);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    if (raw == null || raw is! Map) return null;
+    final map = raw is Map<String, dynamic>
+        ? raw
+        : Map<String, dynamic>.from(raw);
+
+    // Jika response kosong atau data['data'] null
+    if (map['data'] == null && map['score'] == null) {
+      return null;
+    }
+
+    return LineWalkerPerformanceModel.fromJson(map);
+  }
+
+  @override
+  Future<String> downloadBAPembumian({
+    required int towerId,
+    required int inspectionId,
+    required String towerName,
+  }) async {
+    final response = await _dioClient.dio.post(
+      '/gama/line-walker/pembumian/rekap',
+      data: {
+        'ids': [
+          [towerId, inspectionId]
+        ],
+        'type': 'executive-summary',
+        'timezone': 'Asia/Jakarta',
+      },
+      options: Options(responseType: ResponseType.bytes),
+    );
+    final contentType = response.headers.value('content-type');
+    final filePath = await DownloadBaHelper.saveFile(
+      bytes: response.data as List<int>,
+      rawFileName: towerName,
+      contentType: contentType,
+    );
+    return filePath;
+  }
+
+  @override
+  Future<String> downloadBAPPL({
+    required int inspectionId,
+    required String towerName,
+  }) async {
+    final response = await _dioClient.dio.post(
+      '/gama/line-walker/ppl/rekap',
+      data: {
+        'ids': [inspectionId],
+        'type': 'ba',
+        'timezone': 'Asia/Jakarta',
+      },
+      options: Options(responseType: ResponseType.bytes),
+    );
+    final contentType = response.headers.value('content-type');
+    final filePath = await DownloadBaHelper.saveFile(
+      bytes: response.data as List<int>,
+      rawFileName: '$towerName.pdf',
+      contentType: contentType,
+    );
+    return filePath;
+  }
+
+  @override
+  Future<String> downloadBAKegiatanSosial({
+    required int inspectionId,
+    required String towerName,
+  }) async {
+    final response = await _dioClient.dio.post(
+      '/gama/line-walker/kegiatan-sosial/rekap',
+      data: {
+        'ids': [inspectionId],
+        'type': 'ba',
+        'timezone': 'Asia/Jakarta',
+      },
+      options: Options(responseType: ResponseType.bytes),
+    );
+    final contentType = response.headers.value('content-type');
+    final filePath = await DownloadBaHelper.saveFile(
+      bytes: response.data as List<int>,
+      rawFileName: towerName,
+      contentType: contentType,
+    );
+    return filePath;
+  }
+
+  @override
+  Future<String> downloadSuratKetenagakerjaan({
+    required int id,
+    required int minggu,
+    required String bulan,
+    required int tahun,
+    required String status,
+  }) async {
+    final response = await _dioClient.dio.post(
+      '/gama/line-walker/arsakha/print-surat',
+      data: {
+        'id': id,
+        'minggu': minggu,
+        'bulan': bulan,
+        'tahun': tahun,
+        'status': status,
+      },
+      options: Options(responseType: ResponseType.bytes),
+    );
+    final contentType = response.headers.value('content-type');
+    final filePath = await DownloadBaHelper.saveFile(
+      bytes: response.data as List<int>,
+      rawFileName: status,
+      contentType: contentType,
+    );
+    return filePath;
+  }
 }
+

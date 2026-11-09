@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/di/injection_container.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/app_background.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 
 class MyApp extends StatelessWidget {
@@ -18,7 +19,16 @@ class MyApp extends StatelessWidget {
         debugShowMaterialGrid: false,
         theme: AppTheme.lightTheme,
         routerConfig: AppRouter.router,
-      )
+        builder: (context, child) {
+          return GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+            child: AppBackground(
+              child: child ?? const SizedBox.shrink(),
+            ),
+          );
+        },
+      ),
     );
   }
 }

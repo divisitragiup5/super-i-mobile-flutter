@@ -47,6 +47,7 @@ class ProfilePage extends StatelessWidget {
         }
       },
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: AppBar(title: const Text('Akun'), centerTitle: true),
         body: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
@@ -69,166 +70,150 @@ class ProfilePage extends StatelessWidget {
 
             final user = state.user;
 
-            return Stack(
-              children: [
-                // 1. Wallpaper background.jpg
-                Positioned.fill(
-                  child: Image.asset(
-                    'assets/images/background.jpg',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        Container(color: AppColors.backgroundLight),
-                  ),
+            return SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
                 ),
-
-                // 2. Konten Profil
-                SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 24,
-                  ),
-                  child: Column(
-                    children: [
-                      // Avatar Profil Bulat dengan Badge Kamera
-                      Center(
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 110,
-                              height: 110,
-                              decoration: BoxDecoration(
+                child: Column(
+                  children: [
+                    // Avatar Profil Bulat dengan Badge Kamera
+                    Center(
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 110,
+                            height: 110,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              border: Border.all(color: Colors.white, width: 3),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black12,
+                                  blurRadius: 10,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ClipOval(
+                              child:
+                                  user.picture != null &&
+                                      user.picture!.isNotEmpty
+                                  ? Image.network(
+                                      user.picture!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              _buildAvatarFallback(
+                                                user.namaLengkap,
+                                              ),
+                                    )
+                                  : _buildAvatarFallback(user.namaLengkap),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
                                 shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                size: 16,
                                 color: Colors.white,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 3,
-                                ),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 10,
-                                    offset: Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child:
-                                    user.picture != null &&
-                                        user.picture!.isNotEmpty
-                                    ? Image.network(
-                                        user.picture!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                _buildAvatarFallback(
-                                                  user.namaLengkap,
-                                                ),
-                                      )
-                                    : _buildAvatarFallback(user.namaLengkap),
                               ),
                             ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: const BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.camera_alt,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ─── KARTU 1: DATA PRIBADI ───
+                    _buildSectionHeader('DATA PRIBADI'),
+                    const SizedBox(height: 8),
+                    Card(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            _buildInfoRow('NIP', user.nip),
+                            const Divider(height: 20),
+                            _buildInfoRow('Nama Lengkap', user.namaLengkap),
+                            if (user.noTelepon.isNotEmpty) ...[
+                              const Divider(height: 20),
+                              _buildInfoRow('No Telepon', user.noTelepon),
+                            ],
+                            const Divider(height: 20),
+                            _buildInfoRow('Role', user.roles.join(', ')),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
+                    ),
+                    const SizedBox(height: 20),
 
-                      // ─── KARTU 1: DATA PRIBADI ───
-                      _buildSectionHeader('DATA PRIBADI'),
-                      const SizedBox(height: 8),
-                      Card(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            children: [
-                              _buildInfoRow('NIP', user.nip),
-                              const Divider(height: 20),
-                              _buildInfoRow('Nama Lengkap', user.namaLengkap),
-                              if (user.noTelepon.isNotEmpty) ...[
-                                const Divider(height: 20),
-                                _buildInfoRow('No Telepon', user.noTelepon),
-                              ],
-                              const Divider(height: 20),
-                              _buildInfoRow('Role', user.roles.join(', ')),
-                            ],
-                          ),
+                    // ─── KARTU 2: PENGATURAN ───
+                    _buildSectionHeader('PENGATURAN'),
+                    const SizedBox(height: 8),
+                    Card(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.lock_outline,
+                          color: AppColors.primary,
+                        ),
+                        title: const Text(
+                          'Ubah Password',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        trailing: const Icon(
+                          Icons.chevron_right,
+                          color: AppColors.textSecondary,
+                        ),
+                        onTap: () {
+                          context.push(AppRoutes.ubahPassword);
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Tombol Logout
+                    AppButton(
+                      text: 'Logout',
+                      variant: ButtonVariant.danger,
+                      icon: Icons.logout,
+                      onPressed: () => _showLogoutDialog(context),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Badge Versi Aplikasi (Persis Legacy)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'GAMA v5.3.0',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: 20),
-
-                      // ─── KARTU 2: PENGATURAN ───
-                      _buildSectionHeader('PENGATURAN'),
-                      const SizedBox(height: 8),
-                      Card(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        child: ListTile(
-                          leading: const Icon(
-                            Icons.lock_outline,
-                            color: AppColors.primary,
-                          ),
-                          title: const Text(
-                            'Ubah Password',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          trailing: const Icon(
-                            Icons.chevron_right,
-                            color: AppColors.textSecondary,
-                          ),
-                          onTap: () {
-                            context.push(AppRoutes.ubahPassword);
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-
-                      // Tombol Logout
-                      AppButton(
-                        text: 'Logout',
-                        variant: ButtonVariant.danger,
-                        icon: Icons.logout,
-                        onPressed: () => _showLogoutDialog(context),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Badge Versi Aplikasi (Persis Legacy)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'GAMA v5.3.0',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             );
           },
         ),

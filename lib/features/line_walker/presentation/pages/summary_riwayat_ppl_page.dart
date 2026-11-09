@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import '../cubit/ppl_cubit.dart';
 
 class SummaryRiwayatPPLPage extends StatefulWidget {
@@ -22,109 +23,118 @@ class _SummaryRiwayatPPLPageState extends State<SummaryRiwayatPPLPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ringkasan Riwayat PPL'),
+        title: const Text('Riwayat PPL'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
-      body: BlocBuilder<PplCubit, PplState>(
-        builder: (context, state) {
-          if (state is PplLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: AppBackground(
+        child: BlocBuilder<PplCubit, PplState>(
+          builder: (context, state) {
+            final isLoading = state is PplLoading;
+            Map<String, dynamic> summary = {};
+            if (state is PplSummaryLoaded) {
+              summary = state.summary;
+            }
 
-          Map<String, dynamic> summary = {};
-          if (state is PplSummaryLoaded) {
-            summary = state.summary;
-          }
+            final items = [
+              {
+                'icon': Icons.insert_drive_file_outlined,
+                'title': 'Belum TTD',
+                'type': 'belum-ttd-tl-gi',
+                'count': summary['belum-ttd-tl-gi'],
+              },
+              {
+                'icon': Icons.file_copy_outlined,
+                'title': 'Sudah TTD',
+                'type': 'sudah-ttd-tl-gi',
+                'count': summary['sudah-ttd-tl-gi'],
+              },
+              {
+                'icon': Icons.description_outlined,
+                'title': 'Semua',
+                'type': 'all',
+                'count': summary['all'],
+              },
+            ];
 
-          final belumTtd = summary['belum-ttd-tl-gi'] ?? 0;
-          final sudahTtd = summary['sudah-ttd-tl-gi'] ?? 0;
-          final semua = summary['all'] ?? 0;
+            return RefreshIndicator(
+              onRefresh: () => context.read<PplCubit>().loadSummary(),
+              child: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: items.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 16),
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  final count = item['count'];
 
-          return RefreshIndicator(
-            onRefresh: () => context.read<PplCubit>().loadSummary(),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildCard(
-                  title: 'Belum TTD TL GI',
-                  count: belumTtd,
-                  color: Colors.orange,
-                  icon: Icons.pending_actions,
-                  onTap: () => context.push('/riwayat-ppl?type=belum-ttd-tl-gi'),
-                ),
-                const SizedBox(height: 12),
-                _buildCard(
-                  title: 'Sudah TTD TL GI',
-                  count: sudahTtd,
-                  color: Colors.green,
-                  icon: Icons.check_circle_outline,
-                  onTap: () => context.push('/riwayat-ppl?type=sudah-ttd-tl-gi'),
-                ),
-                const SizedBox(height: 12),
-                _buildCard(
-                  title: 'Semua Riwayat PPL',
-                  count: semua,
-                  color: AppColors.primary,
-                  icon: Icons.folder_outlined,
-                  onTap: () => context.push('/riwayat-ppl?type=all'),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildCard({
-    required String title,
-    required dynamic count,
-    required Color color,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 28),
+                  return InkWell(
+                    onTap: () async {
+                      await context.push('/riwayat-ppl?type=${item['type']}');
+                      if (context.mounted) {
+                        context.read<PplCubit>().loadSummary();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                item['icon'] as IconData,
+                                size: 20,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                item['title'] as String,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (isLoading)
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE2E8F0),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            )
+                          else
+                            Text(
+                              (count ?? 0).toString(),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-              ),
-              Text(
-                count.toString(),
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF94A3B8)),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

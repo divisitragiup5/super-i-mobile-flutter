@@ -105,7 +105,7 @@ class _InputBebanPenyulangPageState extends State<InputBebanPenyulangPage> {
                         const Text('Jam / Periode (WIB)', style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<int>(
-                          value: _selectedPeriode,
+                          initialValue: _selectedPeriode,
                           decoration: const InputDecoration(border: OutlineInputBorder()),
                           items: List.generate(24, (i) {
                             return DropdownMenuItem(
@@ -266,7 +266,7 @@ class _InputBebanPenyulangPageState extends State<InputBebanPenyulangPage> {
                               periode: _selectedPeriode,
                               data: data,
                             );
-                            if (mounted) {
+                            if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Draft berhasil disimpan offline')),
                               );

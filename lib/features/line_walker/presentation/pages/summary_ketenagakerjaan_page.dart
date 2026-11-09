@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import '../cubit/ketenagakerjaan_cubit.dart';
+import '../widgets/history_detail_widgets.dart';
 
 class SummaryKetenagakerjaanPage extends StatefulWidget {
   const SummaryKetenagakerjaanPage({super.key});
@@ -14,6 +17,7 @@ class SummaryKetenagakerjaanPage extends StatefulWidget {
 class _SummaryKetenagakerjaanPageState extends State<SummaryKetenagakerjaanPage> {
   final TextEditingController _searchCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
+  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -30,6 +34,7 @@ class _SummaryKetenagakerjaanPageState extends State<SummaryKetenagakerjaanPage>
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
@@ -45,17 +50,25 @@ class _SummaryKetenagakerjaanPageState extends State<SummaryKetenagakerjaanPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ringkasan Ketenagakerjaan'),
+        title: const Text('Ketenagakerjaan'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
-      body: Column(
+      body: AppBackground(
+        child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             color: Colors.white,
             child: TextField(
               controller: _searchCtrl,
+              onChanged: (val) {
+                _searchDebounce?.cancel();
+                _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+                  context.read<KetenagakerjaanCubit>().loadSummary(search: val);
+                });
+                setState(() {});
+              },
               onSubmitted: (val) => context.read<KetenagakerjaanCubit>().loadSummary(search: val),
               decoration: InputDecoration(
                 hintText: 'Cari nama petugas...',
@@ -64,8 +77,10 @@ class _SummaryKetenagakerjaanPageState extends State<SummaryKetenagakerjaanPage>
                     ? IconButton(
                         icon: const Icon(Icons.clear),
                         onPressed: () {
+                          _searchDebounce?.cancel();
                           _searchCtrl.clear();
                           context.read<KetenagakerjaanCubit>().loadSummary(search: '');
+                          setState(() {});
                         },
                       )
                     : null,
@@ -89,7 +104,16 @@ class _SummaryKetenagakerjaanPageState extends State<SummaryKetenagakerjaanPage>
                 if (state is KetenagakerjaanSummaryLoaded) {
                   final items = state.items;
                   if (items.isEmpty) {
-                    return const Center(child: Text('Tidak ada data ketenagakerjaan'));
+                    return RefreshIndicator(
+                      onRefresh: () => context.read<KetenagakerjaanCubit>().loadSummary(search: _searchCtrl.text),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(16),
+                        children: const [
+                          HistoryEmptyCard(),
+                        ],
+                      ),
+                    );
                   }
 
                   return RefreshIndicator(
@@ -98,7 +122,7 @@ class _SummaryKetenagakerjaanPageState extends State<SummaryKetenagakerjaanPage>
                       controller: _scrollCtrl,
                       padding: const EdgeInsets.all(16),
                       itemCount: items.length + (state.isLoadingMore ? 1 : 0),
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         if (index == items.length) {
                           return const Center(
@@ -176,6 +200,7 @@ class _SummaryKetenagakerjaanPageState extends State<SummaryKetenagakerjaanPage>
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

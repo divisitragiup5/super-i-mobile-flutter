@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image/image.dart' as img;
@@ -15,11 +16,13 @@ import '../theme/app_colors.dart';
 class FieldCameraWidget extends StatefulWidget {
   final String title;
   final bool useWatermark;
+  final bool forceLandscape;
 
   const FieldCameraWidget({
     super.key,
     this.title = 'Ambil Foto Dokumentasi',
     this.useWatermark = true,
+    this.forceLandscape = false,
   });
 
   /// Helper untuk membuka kamera dan mengembalikan File foto bertanda air
@@ -27,6 +30,7 @@ class FieldCameraWidget extends StatefulWidget {
     BuildContext context, {
     String title = 'Ambil Foto Dokumentasi',
     bool useWatermark = true,
+    bool forceLandscape = false,
   }) {
     return Navigator.push<File>(
       context,
@@ -34,6 +38,7 @@ class FieldCameraWidget extends StatefulWidget {
         builder: (ctx) => FieldCameraWidget(
           title: title,
           useWatermark: useWatermark,
+          forceLandscape: forceLandscape,
         ),
       ),
     );
@@ -44,8 +49,14 @@ class FieldCameraWidget extends StatefulWidget {
     required BuildContext context,
     String title = 'Ambil Foto Dokumentasi',
     bool useWatermark = true,
+    bool forceLandscape = false,
   }) {
-    return open(context, title: title, useWatermark: useWatermark);
+    return open(
+      context,
+      title: title,
+      useWatermark: useWatermark,
+      forceLandscape: forceLandscape,
+    );
   }
 
   @override
@@ -63,6 +74,12 @@ class _FieldCameraWidgetState extends State<FieldCameraWidget> {
   @override
   void initState() {
     super.initState();
+    if (widget.forceLandscape) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    }
     _initCameras();
   }
 
@@ -212,6 +229,11 @@ class _FieldCameraWidgetState extends State<FieldCameraWidget> {
 
   @override
   void dispose() {
+    if (widget.forceLandscape) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+      ]);
+    }
     _controller?.dispose();
     super.dispose();
   }
@@ -223,6 +245,128 @@ class _FieldCameraWidgetState extends State<FieldCameraWidget> {
         backgroundColor: Colors.black,
         body: const Center(
           child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
+
+    if (widget.forceLandscape) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            // 1. Camera Preview
+            Center(
+              child: CameraPreview(_controller!),
+            ),
+
+            // 2. Top Header Controls
+            Positioned(
+              top: 12,
+              left: 16,
+              right: 120,
+              child: SafeArea(
+                child: Row(
+                  children: [
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.black45,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          shadows: [
+                            Shadow(
+                              offset: Offset(1, 1),
+                              blurRadius: 2,
+                              color: Colors.black,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        _flashMode == FlashMode.off
+                            ? Icons.flash_off
+                            : _flashMode == FlashMode.auto
+                                ? Icons.flash_auto
+                                : Icons.flash_on,
+                        color: Colors.white,
+                      ),
+                      onPressed: _toggleFlash,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 3. Right Side Controls
+            Positioned(
+              right: 20,
+              top: 0,
+              bottom: 0,
+              child: SafeArea(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Tombol Switch Kamera
+                      IconButton(
+                        icon: const Icon(
+                          Icons.cameraswitch,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                        onPressed: _switchCamera,
+                      ),
+                      const SizedBox(height: 24),
+                      // Tombol Capture Shutter
+                      GestureDetector(
+                        onTap: _isCapturing ? null : _takePicture,
+                        child: Container(
+                          width: 76,
+                          height: 76,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 4),
+                            color: _isCapturing
+                                ? Colors.grey
+                                : AppColors.primary.withAlpha(220),
+                          ),
+                          child: _isCapturing
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 3,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 36,
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }

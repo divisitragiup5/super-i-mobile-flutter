@@ -46,9 +46,33 @@ class KetenagakerjaanSummaryLoaded extends KetenagakerjaanState {
 
 class KetenagakerjaanDetailLoaded extends KetenagakerjaanState {
   final List<KetenagakerjaanItemModel> items;
-  const KetenagakerjaanDetailLoaded(this.items);
+  final bool hasReachedMax;
+  final int nextCursor;
+  final bool isLoadingMore;
+
+  const KetenagakerjaanDetailLoaded({
+    required this.items,
+    this.hasReachedMax = false,
+    this.nextCursor = 0,
+    this.isLoadingMore = false,
+  });
+
+  KetenagakerjaanDetailLoaded copyWith({
+    List<KetenagakerjaanItemModel>? items,
+    bool? hasReachedMax,
+    int? nextCursor,
+    bool? isLoadingMore,
+  }) {
+    return KetenagakerjaanDetailLoaded(
+      items: items ?? this.items,
+      hasReachedMax: hasReachedMax ?? this.hasReachedMax,
+      nextCursor: nextCursor ?? this.nextCursor,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    );
+  }
+
   @override
-  List<Object?> get props => [items];
+  List<Object?> get props => [items, hasReachedMax, nextCursor, isLoadingMore];
 }
 
 class KetenagakerjaanError extends KetenagakerjaanState {
@@ -97,10 +121,47 @@ class KetenagakerjaanCubit extends Cubit<KetenagakerjaanState> {
 
   Future<void> loadDetail(int id) async {
     emit(KetenagakerjaanLoading());
-    final result = await repository.getKetenagakerjaanDetail(id);
+    final result = await repository.getKetenagakerjaanDetail(id, cursor: 0);
     result.fold(
       (failure) => emit(KetenagakerjaanError(failure.message)),
-      (items) => emit(KetenagakerjaanDetailLoaded(items)),
+      (items) => emit(KetenagakerjaanDetailLoaded(
+        items: items,
+        hasReachedMax: items.length < 10,
+        nextCursor: items.length,
+      )),
+    );
+  }
+
+  Future<void> loadMoreDetail(int id) async {
+    if (state is KetenagakerjaanDetailLoaded) {
+      final current = state as KetenagakerjaanDetailLoaded;
+      if (current.hasReachedMax || current.isLoadingMore) return;
+
+      emit(current.copyWith(isLoadingMore: true));
+      final result = await repository.getKetenagakerjaanDetail(id, cursor: current.nextCursor);
+      result.fold(
+        (_) => emit(current.copyWith(isLoadingMore: false)),
+        (newItems) => emit(current.copyWith(
+          items: [...current.items, ...newItems],
+          hasReachedMax: newItems.length < 10,
+          nextCursor: current.nextCursor + newItems.length,
+          isLoadingMore: false,
+        )),
+      );
+    }
+  }
+
+  Future<String> downloadSurat(KetenagakerjaanItemModel item) async {
+    final result = await repository.downloadSuratKetenagakerjaan(
+      id: item.id,
+      minggu: item.minggu,
+      bulan: item.bulan,
+      tahun: item.tahun,
+      status: item.status,
+    );
+    return result.fold(
+      (failure) => throw Exception(failure.message),
+      (filePath) => filePath,
     );
   }
 }

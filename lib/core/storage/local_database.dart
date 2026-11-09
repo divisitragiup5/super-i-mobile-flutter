@@ -6,7 +6,7 @@ import 'package:sqflite/sqflite.dart';
 class LocalDatabase {
   static final LocalDatabase instance = LocalDatabase();
   static const String _dbName = 'super_i_mobile.db';
-  static const int _dbVersion = 1;
+  static const int _dbVersion = 2;
 
   Database? _database;
 
@@ -21,7 +21,12 @@ class LocalDatabase {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, _dbName);
 
-    return await openDatabase(path, version: _dbVersion, onCreate: _onCreate);
+    return await openDatabase(
+      path,
+      version: _dbVersion,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
   }
 
   /// Membuat tabel-tabel draft saat database pertama kali dibuat di HP
@@ -57,6 +62,26 @@ class LocalDatabase {
         data TEXT NOT NULL,
         created_at TEXT DEFAULT (datetime('now', 'localtime')),
         updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+      )
+    ''');
+
+    // 4. Tabel cache respon GET API
+    await _createCacheTable(db);
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _createCacheTable(db);
+    }
+  }
+
+  Future<void> _createCacheTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS api_cache (
+        key TEXT PRIMARY KEY,
+        data TEXT NOT NULL,
+        cached_at INTEGER NOT NULL,
+        ttl_seconds INTEGER NOT NULL
       )
     ''');
   }
@@ -413,6 +438,95 @@ class LocalDatabase {
     final db = await database;
     final result = await db.rawQuery('SELECT COUNT(*) as count FROM sutm_drafts');
     return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 4. API GET CACHE (PERSISTENT 24H DEFAULT)
+  // ═══════════════════════════════════════════════════════════════
+
+  /// Menyimpan respon GET ke dalam cache SQLite lokal
+  Future<void> saveApiCache(
+    String key,
+    String data, {
+    int ttlSeconds = 86400, // Default 24 jam (sesuai TanStack Query di super-i-mobile)
+  }) async {
+    final db = await database;
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    await db.insert(
+      'api_cache',
+      {
+        'key': key,
+        'data': data,
+        'cached_at': now,
+        'ttl_seconds': ttlSeconds,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Mengambil respon cache jika masih berlaku (atau fallback jika ignoreExpiration = true)
+  Future<String?> getApiCache(String key, {bool ignoreExpiration = false}) async {
+    final db = await database;
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    final List<Map<String, dynamic>> results;
+    if (ignoreExpiration) {
+      results = await db.query(
+        'api_cache',
+        columns: ['data'],
+        where: 'key = ?',
+        whereArgs: [key],
+        limit: 1,
+      );
+    } else {
+      results = await db.query(
+        'api_cache',
+        columns: ['data'],
+        where: 'key = ? AND (cached_at + ttl_seconds) > ?',
+        whereArgs: [key, now],
+        limit: 1,
+      );
+    }
+
+    if (results.isNotEmpty) {
+      return results.first['data'] as String?;
+    }
+    return null;
+  }
+
+  /// Mengecek apakah cache sudah kadaluarsa atau belum ada
+  Future<bool> isApiCacheExpired(String key) async {
+    final db = await database;
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final results = await db.query(
+      'api_cache',
+      columns: ['cached_at', 'ttl_seconds'],
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    if (results.isEmpty) return true;
+    final cachedAt = results.first['cached_at'] as int;
+    final ttl = results.first['ttl_seconds'] as int;
+    return (cachedAt + ttl) <= now;
+  }
+
+  /// Menghapus cache spesifik
+  Future<int> deleteApiCache(String key) async {
+    final db = await database;
+    return await db.delete('api_cache', where: 'key = ?', whereArgs: [key]);
+  }
+
+  /// Menghapus cache berdasarkan pola URL (misal: '/data/asset/%' saat ada mutasi)
+  Future<int> deleteApiCachePattern(String pattern) async {
+    final db = await database;
+    return await db.delete('api_cache', where: 'key LIKE ?', whereArgs: [pattern]);
+  }
+
+  /// Membersihkan seluruh cache API (misal saat logout)
+  Future<int> clearApiCache() async {
+    final db = await database;
+    return await db.delete('api_cache');
   }
 
   /// Menutup koneksi database saat aplikasi dimatikan

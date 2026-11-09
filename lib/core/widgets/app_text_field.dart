@@ -64,6 +64,7 @@ class _AppTextFieldState extends State<AppTextField> {
           keyboardType: widget.keyboardType,
           readOnly: widget.readOnly,
           onTap: widget.onTap,
+          onTapOutside: (event) => FocusManager.instance.primaryFocus?.unfocus(),
           maxLines: widget.isPassword ? 1 : widget.maxLines,
           onChanged: widget.onChanged,
           decoration: InputDecoration(

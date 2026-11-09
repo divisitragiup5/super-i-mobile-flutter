@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -34,6 +35,48 @@ class WatermarkService {
     final Paint paint = Paint()..filterQuality = FilterQuality.high;
     canvas.drawImage(originalImage, Offset.zero, paint);
 
+    // Gambar Logo PLN ES di pojok kiri atas
+    try {
+      final ByteData logoData =
+          await rootBundle.load('assets/images/pln_es.png');
+      final ui.Codec logoCodec =
+          await ui.instantiateImageCodec(logoData.buffer.asUint8List());
+      final ui.FrameInfo logoFrame = await logoCodec.getNextFrame();
+      final ui.Image logoImage = logoFrame.image;
+
+      final double logoMargin = width * 0.03;
+      final double targetLogoWidth = width * 0.16;
+      final double logoScale = targetLogoWidth / logoImage.width;
+      final double targetLogoHeight = logoImage.height * logoScale;
+
+      final Rect srcRect = Rect.fromLTWH(
+        0,
+        0,
+        logoImage.width.toDouble(),
+        logoImage.height.toDouble(),
+      );
+      final Rect dstRect = Rect.fromLTWH(
+        logoMargin,
+        logoMargin,
+        targetLogoWidth,
+        targetLogoHeight,
+      );
+
+      // Background semi-transparan halus di belakang logo
+      final RRect logoBgRRect = RRect.fromRectAndRadius(
+        dstRect.inflate(targetLogoWidth * 0.06),
+        Radius.circular(targetLogoWidth * 0.05),
+      );
+      final Paint logoBgPaint = Paint()
+        ..color = Colors.black.withValues(alpha: 0.0)
+        ..style = PaintingStyle.fill;
+      canvas.drawRRect(logoBgRRect, logoBgPaint);
+
+      canvas.drawImageRect(logoImage, srcRect, dstRect, paint);
+    } catch (e) {
+      debugPrint('[WatermarkService] Error rendering PLN ES logo: $e');
+    }
+
     // 3. Susun teks watermark
     final formattedDate = DateFormat(
       'dd MMMM yyyy HH:mm:ss',
@@ -52,13 +95,14 @@ class WatermarkService {
 
     // 4. Hitung skala font proporsional terhadap lebar foto
     // Base ukuran font 28px untuk lebar 1080px
-    final double fontSize = (width / 1080.0) * 26.0;
+    final double fontSize = (width / 1080.0) * 10.0;
     final double padding = fontSize * 0.8;
 
     final TextPainter textPainter = TextPainter(
       text: TextSpan(
         text: watermarkText,
         style: TextStyle(
+          fontFamily: 'SpaceMono',
           color: const Color(0xFFFFCC00), // Kuning PLN GAMA
           fontSize: fontSize,
           fontWeight: FontWeight.bold,
@@ -73,6 +117,7 @@ class WatermarkService {
         ),
       ),
       textDirection: ui.TextDirection.ltr,
+      textScaler: TextScaler.noScaling,
       maxLines: 6,
     );
 
@@ -95,7 +140,7 @@ class WatermarkService {
     );
 
     final Paint bgPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.65)
+      ..color = Colors.black.withValues(alpha: 0.35)
       ..style = PaintingStyle.fill;
 
     canvas.drawRRect(bgRRect, bgPaint);

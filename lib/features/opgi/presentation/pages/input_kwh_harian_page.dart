@@ -197,7 +197,7 @@ class _InputKwhHarianPageState extends State<InputKwhHarianPage> {
                               date: widget.date,
                               data: data,
                             );
-                            if (mounted) {
+                            if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Draft berhasil disimpan offline')),
                               );

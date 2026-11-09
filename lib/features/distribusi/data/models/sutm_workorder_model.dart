@@ -1,5 +1,3 @@
-/// Model data Work Order Inspeksi & Pemeliharaan Distribusi SUTM
-
 class SutmFeederModel {
   final int? id;
   final String nama;

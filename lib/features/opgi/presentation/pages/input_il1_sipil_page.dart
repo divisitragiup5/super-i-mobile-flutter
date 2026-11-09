@@ -41,37 +41,37 @@ class _InputIl1SipilPageState extends State<InputIl1SipilPage> {
   final _keteranganAcController = TextEditingController(text: 'Dingin Normal');
 
   // Bangunan
-  String _kondisiAtap = 'TIDAK';
+  final String _kondisiAtap = 'TIDAK';
   final _letakKebocoranController = TextEditingController();
-  String _mainhole = 'TIDAK';
-  String _powerSupplyAC = 'ADA';
+  final String _mainhole = 'TIDAK';
+  final String _powerSupplyAC = 'ADA';
 
   // DC / Baterai
-  String _kebersihanDCBC = 'BERSIH';
-  String _kebersihanRuangBaterai = 'BERSIH';
+  final String _kebersihanDCBC = 'BERSIH';
+  final String _kebersihanRuangBaterai = 'BERSIH';
   final _suhuBateraiController = TextEditingController(text: '25.0');
   final _kelembabanBateraiController = TextEditingController(text: '60.0');
-  String _kebersihanBaterai = 'BERSIH';
-  String _kebocoranBaterai = 'TIDAK';
-  String _exhaustFan = 'BERFUNGSI';
-  String _kondisiRuangBaterai = 'TIDAK';
+  final String _kebersihanBaterai = 'BERSIH';
+  final String _kebocoranBaterai = 'TIDAK';
+  final String _exhaustFan = 'BERFUNGSI';
+  final String _kondisiRuangBaterai = 'TIDAK';
   final _teganganBebanController = TextEditingController(text: '110.0');
   final _arusBebanController = TextEditingController(text: '5.0');
 
   // Rectifier
-  String _kondisiRectifier = 'BAIK';
-  String _kebersihanRuangRectifier = 'BERSIH';
+  final String _kondisiRectifier = 'BAIK';
+  final String _kebersihanRuangRectifier = 'BERSIH';
   final _suhuRectifierController = TextEditingController(text: '26.0');
   final _kelembabanRectifierController = TextEditingController(text: '55.0');
-  String _kebersihanPanel = 'BERSIH';
+  final String _kebersihanPanel = 'BERSIH';
 
   // Komunikasi
-  String _kondisiMMI = 'BAIK';
-  String _kondisiMouse = 'BAIK';
-  String _kondisiKeyboard = 'BAIK';
-  String _kondisiInternet = 'BAIK';
-  String _kondisiRadio = 'BAIK';
-  String _kondisiYealink = 'BAIK';
+  final String _kondisiMMI = 'BAIK';
+  final String _kondisiMouse = 'BAIK';
+  final String _kondisiKeyboard = 'BAIK';
+  final String _kondisiInternet = 'BAIK';
+  final String _kondisiRadio = 'BAIK';
+  final String _kondisiYealink = 'BAIK';
 
   XFile? _fotoInspeksi;
 
@@ -186,7 +186,7 @@ class _InputIl1SipilPageState extends State<InputIl1SipilPage> {
                           children: [
                             Expanded(
                               child: DropdownButtonFormField<String>(
-                                value: _kondisiLampu,
+                                initialValue: _kondisiLampu,
                                 decoration: const InputDecoration(labelText: 'Kondisi Lampu', border: OutlineInputBorder()),
                                 items: const [
                                   DropdownMenuItem(value: 'BAIK', child: Text('BAIK')),
@@ -198,7 +198,7 @@ class _InputIl1SipilPageState extends State<InputIl1SipilPage> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: DropdownButtonFormField<String>(
-                                value: _jenisLampu,
+                                initialValue: _jenisLampu,
                                 decoration: const InputDecoration(labelText: 'Jenis Lampu', border: OutlineInputBorder()),
                                 items: const [
                                   DropdownMenuItem(value: 'LED', child: Text('LED')),
@@ -250,7 +250,7 @@ class _InputIl1SipilPageState extends State<InputIl1SipilPage> {
                         const Text('2. Pendingin Udara (AC) & Ruangan', style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _kondisiRuangan,
+                          initialValue: _kondisiRuangan,
                           decoration: const InputDecoration(labelText: 'Kondisi Ruangan Panas?', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'TIDAK', child: Text('TIDAK (NORMAL)')),
@@ -400,7 +400,7 @@ class _InputIl1SipilPageState extends State<InputIl1SipilPage> {
                             date: DateTime.now().toIso8601String(),
                             data: data,
                           );
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Draft berhasil disimpan offline')),
                             );

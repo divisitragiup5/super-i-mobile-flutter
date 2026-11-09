@@ -35,18 +35,18 @@ class _InputIl1KubikelPageState extends State<InputIl1KubikelPage> {
   String _tetesanAir = 'TIDAK';
   String _desis = 'TIDAK';
   String _bau = 'TIDAK';
-  String _kondisiLVPanel = 'BERSIH';
-  String _lampuLVPanel = 'NYALA';
-  String _indikatorPMTClose = 'NYALA';
-  String _indikatorPMTOpen = 'TIDAK';
-  String _indikatorTegangan = 'NYALA';
+  final String _kondisiLVPanel = 'BERSIH';
+  final String _lampuLVPanel = 'NYALA';
+  final String _indikatorPMTClose = 'NYALA';
+  final String _indikatorPMTOpen = 'TIDAK';
+  final String _indikatorTegangan = 'NYALA';
   String _tampilanRelayOCR = 'NORMAL';
-  String _indikatorHealthyOCR = 'NYALA';
+  final String _indikatorHealthyOCR = 'NYALA';
   final _arusNetralOCRController = TextEditingController(text: '0.0');
-  String _keteranganRelayUFR = 'TIDAK ADA';
+  final String _keteranganRelayUFR = 'TIDAK ADA';
   String _tampilanLCDKWH = 'NORMAL';
-  String _tombolKWH = 'NORMAL';
-  String _kondisiAlarm = 'ADA';
+  final String _tombolKWH = 'NORMAL';
+  final String _kondisiAlarm = 'ADA';
   String _keteranganAnomali = 'TIDAK ADA';
   final _anomaliDetailController = TextEditingController();
 
@@ -143,7 +143,7 @@ class _InputIl1KubikelPageState extends State<InputIl1KubikelPage> {
                         const Text('1. Status & Mekanik PMT', style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _statusPMT,
+                          initialValue: _statusPMT,
                           decoration: const InputDecoration(labelText: 'Status PMT', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'CLOSE', child: Text('CLOSE')),
@@ -153,7 +153,7 @@ class _InputIl1KubikelPageState extends State<InputIl1KubikelPage> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _rackPMT,
+                          initialValue: _rackPMT,
                           decoration: const InputDecoration(labelText: 'Rack PMT', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'RACK IN', child: Text('RACK IN')),
@@ -163,7 +163,7 @@ class _InputIl1KubikelPageState extends State<InputIl1KubikelPage> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _kondisiSF6PMT,
+                          initialValue: _kondisiSF6PMT,
                           decoration: const InputDecoration(labelText: 'Kondisi Gas SF6 PMT', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'GOOD', child: Text('GOOD')),
@@ -174,7 +174,7 @@ class _InputIl1KubikelPageState extends State<InputIl1KubikelPage> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _indikatorPegas,
+                          initialValue: _indikatorPegas,
                           decoration: const InputDecoration(labelText: 'Indikator Pegas Mekanik PMT', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'CHARGE', child: Text('CHARGE')),
@@ -218,7 +218,7 @@ class _InputIl1KubikelPageState extends State<InputIl1KubikelPage> {
                         const Text('3. Relay Proteksi & KWH Meter', style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _tampilanRelayOCR,
+                          initialValue: _tampilanRelayOCR,
                           decoration: const InputDecoration(labelText: 'Tampilan LCD Relay OCR', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'NORMAL', child: Text('NORMAL')),
@@ -234,7 +234,7 @@ class _InputIl1KubikelPageState extends State<InputIl1KubikelPage> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _tampilanLCDKWH,
+                          initialValue: _tampilanLCDKWH,
                           decoration: const InputDecoration(labelText: 'Tampilan LCD KWH Meter', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'NORMAL', child: Text('NORMAL')),
@@ -258,7 +258,7 @@ class _InputIl1KubikelPageState extends State<InputIl1KubikelPage> {
                         const Text('4. Anomali', style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _keteranganAnomali,
+                          initialValue: _keteranganAnomali,
                           decoration: const InputDecoration(labelText: 'Keterangan Anomali', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'TIDAK ADA', child: Text('TIDAK ADA')),
@@ -340,7 +340,7 @@ class _InputIl1KubikelPageState extends State<InputIl1KubikelPage> {
                             date: DateTime.now().toIso8601String(),
                             data: data,
                           );
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Draft berhasil disimpan offline')),
                             );

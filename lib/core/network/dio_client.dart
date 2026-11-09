@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/api_constants.dart';
 import '../constants/storage_constants.dart';
 import '../errors/exceptions.dart';
+import 'dio_cache_interceptor.dart';
 
 /// Client HTTP terpusat menggunakan Dio.
 /// Otomatis menyematkan token Bearer dan memetakan error HTTP ke Exception aplikasi.
@@ -62,7 +63,10 @@ class DioClient {
       ),
     );
 
-    // 2. Interceptor Logging (Hanya aktif saat debugging di laptop)
+    // 2. Interceptor Cache SQLite Lokal (Otomatis cache semua GET dengan default TTL 24 jam)
+    dio.interceptors.add(DioCacheInterceptor());
+
+    // 3. Interceptor Logging (Hanya aktif saat debugging di laptop)
     // kDebugMode di Flutter setara dengan __DEV__ di React Native
     if (kDebugMode) {
       dio.interceptors.add(

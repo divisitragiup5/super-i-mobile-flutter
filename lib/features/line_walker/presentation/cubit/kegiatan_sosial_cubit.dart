@@ -221,4 +221,35 @@ class KegiatanSosialCubit extends Cubit<KegiatanSosialState> {
       )),
     );
   }
+
+  Future<void> loadMoreHistoryByIdentifier(String identifier) async {
+    if (state is KegiatanSosialHistoryLoaded) {
+      final current = state as KegiatanSosialHistoryLoaded;
+      if (current.hasReachedMax || current.isLoadingMore) return;
+
+      emit(current.copyWith(isLoadingMore: true));
+      final result = await repository.getKegiatanSosialHistoryByIdentifier(identifier, cursor: current.nextCursor);
+      result.fold(
+        (_) => emit(current.copyWith(isLoadingMore: false)),
+        (newItems) => emit(current.copyWith(
+          items: [...current.items, ...newItems],
+          hasReachedMax: newItems.length < 10,
+          nextCursor: current.nextCursor + newItems.length,
+          isLoadingMore: false,
+        )),
+      );
+    }
+  }
+
+  Future<String> downloadBA(KegiatanSosialHistoryItemModel item) async {
+    final result = await repository.downloadBAKegiatanSosial(
+      inspectionId: item.id,
+      towerName: item.namaTower ?? 'Tower-${item.towerId}',
+    );
+    return result.fold(
+      (failure) => throw Exception(failure.message),
+      (path) => path,
+    );
+  }
 }
+

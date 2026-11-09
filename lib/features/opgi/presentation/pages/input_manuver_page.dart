@@ -82,7 +82,7 @@ class _InputManuverPageState extends State<InputManuverPage> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _tipeManuver,
+                          initialValue: _tipeManuver,
                           decoration: const InputDecoration(labelText: 'Tipe Manuver', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'PEMELIHARAAN', child: Text('PEMELIHARAAN')),
@@ -94,7 +94,7 @@ class _InputManuverPageState extends State<InputManuverPage> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _objek,
+                          initialValue: _objek,
                           decoration: const InputDecoration(labelText: 'Objek Manuver', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'PMT', child: Text('PMT')),
@@ -109,7 +109,7 @@ class _InputManuverPageState extends State<InputManuverPage> {
                           children: [
                             Expanded(
                               child: DropdownButtonFormField<String>(
-                                value: _tindakan,
+                                initialValue: _tindakan,
                                 decoration: const InputDecoration(labelText: 'Tindakan', border: OutlineInputBorder()),
                                 items: const [
                                   DropdownMenuItem(value: 'BUKA', child: Text('BUKA')),
@@ -123,7 +123,7 @@ class _InputManuverPageState extends State<InputManuverPage> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: DropdownButtonFormField<String>(
-                                value: _status,
+                                initialValue: _status,
                                 decoration: const InputDecoration(labelText: 'Status Akhir', border: OutlineInputBorder()),
                                 items: const [
                                   DropdownMenuItem(value: 'OPEN', child: Text('OPEN')),

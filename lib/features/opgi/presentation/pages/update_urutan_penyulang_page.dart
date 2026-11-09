@@ -81,7 +81,7 @@ class _UpdateUrutanPenyulangPageState extends State<UpdateUrutanPenyulangPage> {
           : ReorderableListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: _items.length,
-              onReorder: (oldIndex, newIndex) {
+              onReorderItem: (oldIndex, newIndex) {
                 setState(() {
                   if (newIndex > oldIndex) newIndex -= 1;
                   final item = _items.removeAt(oldIndex);
@@ -95,7 +95,7 @@ class _UpdateUrutanPenyulangPageState extends State<UpdateUrutanPenyulangPage> {
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: AppTheme.primary.withOpacity(0.1),
+                      backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
                       child: Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
                     ),
                     title: Text(item['nama'] as String? ?? '-'),

@@ -112,35 +112,83 @@ class KegiatanSosialInputModel {
 
 class KegiatanSosialHistoryItemModel {
   final int id;
-  final String? identifier;
+  final int towerId;
+  final String identifier;
   final String? namaTower;
+  final String? namaAktivitas;
   final String? jenisAktivitas;
   final String? statusAktivitas;
+  final String kategoriAktivitas;
+  final String? statusObjek;
   final String? pelakuAktivitasSosial;
   final String? createdAt;
+  final int totalUpdate;
+  final int belumTTDTLGI;
+  final int sudahTTDTLGI;
   final String? ttdTLGI;
+  final String? namaTTDTLGI;
+  final String? ttdLineWalker;
+  final String? namaTTDLineWalker;
+  final bool isEditable;
+  final Map<String, dynamic> rawJson;
 
   KegiatanSosialHistoryItemModel({
     required this.id,
-    this.identifier,
+    required this.towerId,
+    required this.identifier,
     this.namaTower,
+    this.namaAktivitas,
     this.jenisAktivitas,
     this.statusAktivitas,
+    this.kategoriAktivitas = 'NORMAL',
+    this.statusObjek,
     this.pelakuAktivitasSosial,
     this.createdAt,
+    this.totalUpdate = 0,
+    this.belumTTDTLGI = 0,
+    this.sudahTTDTLGI = 0,
     this.ttdTLGI,
+    this.namaTTDTLGI,
+    this.ttdLineWalker,
+    this.namaTTDLineWalker,
+    this.isEditable = true,
+    this.rawJson = const {},
   });
 
   factory KegiatanSosialHistoryItemModel.fromJson(Map<String, dynamic> json) {
+    final towerMap = json['tower'] is Map ? json['tower'] as Map<String, dynamic> : null;
+    final tId = towerMap != null && towerMap['id'] != null
+        ? (towerMap['id'] is int ? towerMap['id'] as int : int.tryParse('${towerMap['id']}') ?? 0)
+        : (json['towerId'] is int ? json['towerId'] as int : int.tryParse('${json['towerId']}') ?? 0);
+
     return KegiatanSosialHistoryItemModel(
-      id: json['id'] is int ? json['id'] : int.tryParse('${json['id']}') ?? 0,
-      identifier: json['identifier']?.toString(),
-      namaTower: json['tower'] is Map ? json['tower']['nama']?.toString() : null,
+      id: json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}') ?? 0,
+      towerId: tId,
+      identifier: json['identifier']?.toString() ?? '',
+      namaTower: towerMap != null ? towerMap['nama']?.toString() : json['namaTower']?.toString(),
+      namaAktivitas: json['namaAktivitas']?.toString(),
       jenisAktivitas: json['jenisAktivitas']?.toString(),
       statusAktivitas: json['statusAktivitas']?.toString(),
+      kategoriAktivitas: json['kategoriAktivitas']?.toString() ?? 'NORMAL',
+      statusObjek: json['statusObjek']?.toString(),
       pelakuAktivitasSosial: json['pelakuAktivitasSosial']?.toString(),
       createdAt: json['createdAt']?.toString(),
+      totalUpdate: json['totalUpdate'] is int
+          ? json['totalUpdate'] as int
+          : int.tryParse('${json['totalUpdate']}') ?? 0,
+      belumTTDTLGI: json['belumTTDTLGI'] is int
+          ? json['belumTTDTLGI'] as int
+          : int.tryParse('${json['belumTTDTLGI']}') ?? 0,
+      sudahTTDTLGI: json['sudahTTDTLGI'] is int
+          ? json['sudahTTDTLGI'] as int
+          : int.tryParse('${json['sudahTTDTLGI']}') ?? 0,
       ttdTLGI: json['ttdTLGI']?.toString(),
+      namaTTDTLGI: json['namaTTDTLGI']?.toString(),
+      ttdLineWalker: json['ttdLineWalker']?.toString(),
+      namaTTDLineWalker: json['namaTTDLineWalker']?.toString(),
+      isEditable: json['isEditable'] != false,
+      rawJson: json,
     );
   }
 }
+

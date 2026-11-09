@@ -1,4 +1,5 @@
 /// Model data untuk Realisasi Beban Trafo, Beban Penyulang, KWH Harian, dan Tegangan Trafo
+library;
 
 class BebanTrafoModel {
   final int? id;

@@ -78,7 +78,7 @@ class _InputKondisiAnomaliGiPageState extends State<InputKondisiAnomaliGiPage> {
                         const Text('Update Status & Urgensi', style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _urgensi,
+                          initialValue: _urgensi,
                           decoration: const InputDecoration(labelText: 'Tingkat Urgensi', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'AMAN', child: Text('AMAN')),
@@ -89,7 +89,7 @@ class _InputKondisiAnomaliGiPageState extends State<InputKondisiAnomaliGiPage> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _tindakan,
+                          initialValue: _tindakan,
                           decoration: const InputDecoration(labelText: 'Tindakan', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'TIDAK ADA', child: Text('TIDAK ADA')),

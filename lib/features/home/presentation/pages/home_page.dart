@@ -10,6 +10,9 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../../core/di/injection_container.dart';
+import '../cubit/drafts_cubit.dart';
+import '../cubit/line_walker_performance_cubit.dart';
+import '../cubit/ppl_condition_summary_cubit.dart';
 import '../cubit/sutm_inspeksi_score_cubit.dart';
 import '../cubit/sutm_pemeliharaan_score_cubit.dart';
 import '../../../notification/presentation/cubit/notification_cubit.dart';
@@ -57,10 +60,19 @@ class HomePage extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
+          create: (_) => sl<DraftsCubit>()..loadDrafts(),
+        ),
+        BlocProvider(
+          create: (_) => sl<LineWalkerPerformanceCubit>()..fetchPerformance(),
+        ),
+        BlocProvider(
           create: (_) => sl<SutmInspeksiScoreCubit>()..fetchScore(),
         ),
         BlocProvider(
           create: (_) => sl<SutmPemeliharaanScoreCubit>()..fetchScore(),
+        ),
+        BlocProvider(
+          create: (_) => sl<PplConditionSummaryCubit>()..fetchSummary(),
         ),
         BlocProvider(
           create: (_) => sl<NotificationCubit>()..fetchUnreadCount(),
@@ -128,6 +140,9 @@ class HomePage extends StatelessWidget {
                             context.read<SutmInspeksiScoreCubit>().fetchScore();
                             context.read<SutmPemeliharaanScoreCubit>().fetchScore();
                             context.read<NotificationCubit>().fetchUnreadCount();
+                            context.read<DraftsCubit>().loadDrafts();
+                            context.read<LineWalkerPerformanceCubit>().fetchPerformance();
+                            context.read<PplConditionSummaryCubit>().fetchSummary();
                           },
                           child: SingleChildScrollView(
                             physics: const AlwaysScrollableScrollPhysics(),
@@ -184,7 +199,7 @@ class HomePage extends StatelessWidget {
                                 ),
 
                               // ─── 6. DRAFT OFFLINE LAPANGAN ───
-                              const OfflineDraftsCard(),
+                              // const OfflineDraftsCard(),
 
                               // ─── 7. MENU OPERASIONAL DINAMIS ───
                               const Text(
@@ -202,7 +217,7 @@ class HomePage extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              // const SizedBox(height: 12),
 
                               allowedMenus.isEmpty
                                   ? Container(

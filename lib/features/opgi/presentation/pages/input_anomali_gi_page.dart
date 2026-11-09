@@ -99,7 +99,7 @@ class _InputAnomaliGiPageState extends State<InputAnomaliGiPage> {
                         const Text('Informasi Aset', style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _jenisAsset,
+                          initialValue: _jenisAsset,
                           decoration: const InputDecoration(labelText: 'Jenis Aset', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'PENYULANG', child: Text('PENYULANG')),
@@ -122,7 +122,7 @@ class _InputAnomaliGiPageState extends State<InputAnomaliGiPage> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _entitas,
+                          initialValue: _entitas,
                           decoration: const InputDecoration(labelText: 'Entitas', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'KUBIKEL', child: Text('KUBIKEL')),
@@ -147,7 +147,7 @@ class _InputAnomaliGiPageState extends State<InputAnomaliGiPage> {
                         const Text('Klasifikasi Anomali', style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _urgensi,
+                          initialValue: _urgensi,
                           decoration: const InputDecoration(labelText: 'Tingkat Urgensi', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'AMAN', child: Text('AMAN')),
@@ -158,7 +158,7 @@ class _InputAnomaliGiPageState extends State<InputAnomaliGiPage> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _tindakan,
+                          initialValue: _tindakan,
                           decoration: const InputDecoration(labelText: 'Tindakan', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'TIDAK ADA', child: Text('TIDAK ADA')),
@@ -237,7 +237,7 @@ class _InputAnomaliGiPageState extends State<InputAnomaliGiPage> {
                               date: DateTime.now().toIso8601String(),
                               data: data,
                             );
-                            if (mounted) {
+                            if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Draft anomali berhasil disimpan offline')),
                               );

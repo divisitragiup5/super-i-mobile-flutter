@@ -5,8 +5,13 @@ class ApiConstants {
   ApiConstants._();
 
   // Mengambil URL dari file .env secara dinamis, dengan fallback jika .env tidak terbaca
-  static String get baseUrl =>
-      dotenv.env['BASE_URL'] ?? 'https://super-i-app.haleyorapower.co.id/api';
+  static String get baseUrl {
+    try {
+      return dotenv.env['BASE_URL'] ?? 'https://super-i-app.haleyorapower.co.id/api';
+    } catch (_) {
+      return 'https://super-i-app.haleyorapower.co.id/api';
+    }
+  }
 
   // Durasi batas waktu koneksi (30 detik untuk kondisi sinyal lapangan)
   static const Duration connectTimeout = Duration(seconds: 30);

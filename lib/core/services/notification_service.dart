@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
+import '../utils/file_viewer_helper.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
-/// Service terpusat untuk mengelola notifikasi lokal dan penjadwalan alarm Clock Out.
+/// Service terpusat untuk mengelola notifikasi lokal, pengingat shift, dan notifikasi unduhan.
 class NotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -13,6 +14,11 @@ class NotificationService {
   static const String _shiftChannelName = 'Pengingat Shift Presensi';
   static const String _shiftChannelDesc =
       'Notifikasi pengingat waktu absen pulang kerja (Clock Out)';
+
+  static const String _downloadChannelId = 'download_channel';
+  static const String _downloadChannelName = 'Unduhan File & Berita Acara';
+  static const String _downloadChannelDesc =
+      'Notifikasi saat file Berita Acara atau dokumen berhasil diunduh';
 
   // ID Notifikasi unik agar tidak bentrok
   static const int notificationIdBeforeEnd = 1001; // 20 menit sebelum usai
@@ -32,15 +38,24 @@ class NotificationService {
 
     await _notificationsPlugin.initialize(
       settings: initSettings,
-      onDidReceiveNotificationResponse: (response) {
+      onDidReceiveNotificationResponse: (response) async {
         debugPrint(
           '[NOTIFICATION] User tapped notification: ${response.payload}',
         );
+        final payload = response.payload;
+        if (payload != null && payload.isNotEmpty) {
+          await FileViewerHelper.openFile(payload);
+        }
       },
     );
 
-    // 3. Buat Notification Channel dengan prioritas tinggi (High Importance)
-    final androidNotificationChannel = AndroidNotificationChannel(
+    final androidPlugin = _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+
+    // 3. Buat Notification Channels
+    final shiftChannel = AndroidNotificationChannel(
       _shiftChannelId,
       _shiftChannelName,
       description: _shiftChannelDesc,
@@ -49,11 +64,30 @@ class NotificationService {
       enableVibration: true,
     );
 
-    await _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(androidNotificationChannel);
+    final downloadChannel = AndroidNotificationChannel(
+      _downloadChannelId,
+      _downloadChannelName,
+      description: _downloadChannelDesc,
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    await androidPlugin?.createNotificationChannel(shiftChannel);
+    await androidPlugin?.createNotificationChannel(downloadChannel);
+
+    // 4. Minta izin notifikasi di Android 13+
+    await androidPlugin?.requestNotificationsPermission();
+
+    // 5. Cek jika aplikasi dibuka dari notifikasi saat terminated
+    final launchDetails =
+        await _notificationsPlugin.getNotificationAppLaunchDetails();
+    if (launchDetails?.didNotificationLaunchApp == true) {
+      final payload = launchDetails?.notificationResponse?.payload;
+      if (payload != null && payload.isNotEmpty) {
+        await FileViewerHelper.openFile(payload);
+      }
+    }
   }
 
   /// Menjadwalkan pengingat Clock Out saat petugas selesai melakukan Clock In.
@@ -141,5 +175,34 @@ class NotificationService {
       body: body,
       notificationDetails: details,
     );
+  }
+
+  /// Menampilkan notifikasi download selesai dengan payload path file
+  /// Ketika notifikasi diklik, file akan langsung dibuka via open_filex
+  Future<void> showDownloadNotification({
+    required String filePath,
+    required String fileName,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      _downloadChannelId,
+      _downloadChannelName,
+      channelDescription: _downloadChannelDesc,
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+    );
+    const details = NotificationDetails(android: androidDetails);
+
+    final notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    await _notificationsPlugin.show(
+      id: notificationId,
+      title: 'Unduhan Selesai 📄',
+      body: '$fileName berhasil diunduh. Ketuk untuk membuka file.',
+      notificationDetails: details,
+      payload: filePath,
+    );
+    debugPrint('[NOTIFICATION] Download notification shown for: $filePath');
   }
 }

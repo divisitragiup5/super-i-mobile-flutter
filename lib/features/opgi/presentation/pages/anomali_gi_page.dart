@@ -160,7 +160,7 @@ class _AnomaliGiPageState extends State<AnomaliGiPage> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: urgensiColor.withOpacity(0.1),
+                                  color: urgensiColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(color: urgensiColor),
                                 ),

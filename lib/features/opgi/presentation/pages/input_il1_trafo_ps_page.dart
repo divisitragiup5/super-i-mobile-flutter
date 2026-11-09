@@ -113,7 +113,7 @@ class _InputIl1TrafoPsPageState extends State<InputIl1TrafoPsPage> {
                         const Text('Spesifikasi Trafo PS (Opsional)', style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _jenisTrafo,
+                          initialValue: _jenisTrafo,
                           decoration: const InputDecoration(labelText: 'Tipe Penempatan', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'INDOOR', child: Text('INDOOR')),
@@ -162,7 +162,7 @@ class _InputIl1TrafoPsPageState extends State<InputIl1TrafoPsPage> {
                         const Text('Kondisi Visual Trafo', style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _kebocoranBody,
+                          initialValue: _kebocoranBody,
                           decoration: const InputDecoration(labelText: 'Kebocoran Body Trafo', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(
@@ -186,7 +186,7 @@ class _InputIl1TrafoPsPageState extends State<InputIl1TrafoPsPage> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _kondisiFisik,
+                          initialValue: _kondisiFisik,
                           decoration: const InputDecoration(labelText: 'Kondisi Fisik Trafo', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'MULUS BERSIH', child: Text('MULUS BERSIH')),
@@ -199,7 +199,7 @@ class _InputIl1TrafoPsPageState extends State<InputIl1TrafoPsPage> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _kondisiRumah,
+                          initialValue: _kondisiRumah,
                           decoration: const InputDecoration(labelText: 'Kondisi Rumah Trafo', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'ADA DAN BAIK', child: Text('ADA DAN BAIK')),
@@ -269,7 +269,7 @@ class _InputIl1TrafoPsPageState extends State<InputIl1TrafoPsPage> {
                             date: DateTime.now().toIso8601String(),
                             data: data,
                           );
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Draft berhasil disimpan offline')),
                             );

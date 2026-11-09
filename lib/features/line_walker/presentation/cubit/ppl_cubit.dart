@@ -110,7 +110,7 @@ class PplCubit extends Cubit<PplState> {
 
   Future<void> loadTowers() async {
     emit(PplLoading());
-    final result = await repository.getTowers();
+    final result = await repository.getTowers(type: 'JOINT,SPAN');
     result.fold(
       (failure) => emit(PplSubmitFailure(failure.message)),
       (towers) => emit(PplLoaded(towers: towers)),
@@ -229,4 +229,35 @@ class PplCubit extends Cubit<PplState> {
       )),
     );
   }
+
+  Future<void> loadMoreHistoryByIdentifier(String identifier) async {
+    if (state is PplHistoryLoaded) {
+      final current = state as PplHistoryLoaded;
+      if (current.hasReachedMax || current.isLoadingMore) return;
+
+      emit(current.copyWith(isLoadingMore: true));
+      final result = await repository.getPplHistoryByIdentifier(identifier, cursor: current.nextCursor);
+      result.fold(
+        (_) => emit(current.copyWith(isLoadingMore: false)),
+        (newItems) => emit(current.copyWith(
+          items: [...current.items, ...newItems],
+          hasReachedMax: newItems.length < 10,
+          nextCursor: current.nextCursor + newItems.length,
+          isLoadingMore: false,
+        )),
+      );
+    }
+  }
+
+  Future<String> downloadBA(PPLHistoryItemModel item) async {
+    final result = await repository.downloadBAPPL(
+      inspectionId: item.id,
+      towerName: item.namaTower ?? 'Tower-${item.towerId}',
+    );
+    return result.fold(
+      (failure) => throw Exception(failure.message),
+      (path) => path,
+    );
+  }
 }
+

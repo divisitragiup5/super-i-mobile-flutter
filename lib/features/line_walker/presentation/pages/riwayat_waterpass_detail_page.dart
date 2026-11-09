@@ -1,199 +1,159 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import '../../data/models/waterpass_model.dart';
+import '../widgets/history_detail_widgets.dart';
 
 class RiwayatWaterpassDetailPage extends StatelessWidget {
-  final WaterpassDetailModel item;
+  final dynamic data;
+  final WaterpassDetailModel? item;
 
   const RiwayatWaterpassDetailPage({
     super.key,
-    required this.item,
+    this.data,
+    this.item,
   });
 
-  void _showImageZoom(BuildContext context, String? url) {
-    if (url == null || url.isEmpty) return;
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(12),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            InteractiveViewer(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(url, fit: BoxFit.contain),
-              ),
-            ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                onPressed: () => Navigator.pop(ctx),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImageTile(BuildContext context, String label, String? url) {
-    if (url == null || url.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
-        ),
-        const SizedBox(height: 6),
-        InkWell(
-          onTap: () => _showImageZoom(context, url),
-          child: Container(
-            height: 180,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.network(
-                url,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Center(
-                  child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-      ],
-    );
-  }
-
-  Widget _buildAxisCard(BuildContext context, String axisName, double? hasil, String? photoUrl) {
-    if (hasil == null && (photoUrl == null || photoUrl.isEmpty)) return const SizedBox.shrink();
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              axisName,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (hasil != null) ...[
-              const Text(
-                'Nilai Hasil',
-                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                hasil.toString(),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (photoUrl != null) _buildImageTile(context, 'Foto Bukti $axisName', photoUrl),
-          ],
-        ),
-      ),
-    );
-  }
+  static const Map<String, String> _keyMap = {
+    'waterpassX': 'WATERPASS X',
+    'waterpassY': 'WATERPASS Y',
+    'waterpassZ': 'WATERPASS Z',
+  };
 
   @override
   Widget build(BuildContext context) {
+    final effectiveData = data ?? item;
+    Map<String, dynamic> itemMap = {};
+
+    if (effectiveData is Map<String, dynamic>) {
+      itemMap = effectiveData;
+    } else if (effectiveData is WaterpassDetailModel) {
+      itemMap = effectiveData.rawJson.isNotEmpty
+          ? effectiveData.rawJson
+          : {
+              'tower': {'nama': effectiveData.namaTower},
+              'createdAt': effectiveData.createdAt,
+              if (effectiveData.fotoSebelumUrl != null)
+                'fotoTowerSebelumInspeksi': {'uri': effectiveData.fotoSebelumUrl},
+              if (effectiveData.fotoSetelahUrl != null)
+                'fotoTowerSetelahInspeksi': {'uri': effectiveData.fotoSetelahUrl},
+              if (effectiveData.hasilX != null || effectiveData.fotoXUrl != null)
+                'waterpassX': {
+                  'hasil': effectiveData.hasilX,
+                  'pict': {'uri': effectiveData.fotoXUrl},
+                },
+              if (effectiveData.hasilY != null || effectiveData.fotoYUrl != null)
+                'waterpassY': {
+                  'hasil': effectiveData.hasilY,
+                  'pict': {'uri': effectiveData.fotoYUrl},
+                },
+              if (effectiveData.hasilZ != null || effectiveData.fotoZUrl != null)
+                'waterpassZ': {
+                  'hasil': effectiveData.hasilZ,
+                  'pict': {'uri': effectiveData.fotoZUrl},
+                },
+            };
+    }
+
+    final towerName = itemMap['tower'] is Map
+        ? itemMap['tower']['nama']?.toString()
+        : (itemMap['tower']?.toString() ?? 'Tower');
+    final createdAt = itemMap['createdAt'];
+
+    final fotoSebelum = itemMap['fotoTowerSebelumInspeksi'] is Map
+        ? itemMap['fotoTowerSebelumInspeksi']['uri']?.toString()
+        : itemMap['fotoTowerSebelumInspeksi']?.toString();
+
+    final fotoSetelah = itemMap['fotoTowerSetelahInspeksi'] is Map
+        ? itemMap['fotoTowerSetelahInspeksi']['uri']?.toString()
+        : itemMap['fotoTowerSetelahInspeksi']?.toString();
+
+    final availableAxes = <String, Map<String, dynamic>>{};
+    for (final key in _keyMap.keys) {
+      if (itemMap[key] != null && itemMap[key] is Map<String, dynamic>) {
+        availableAxes[key] = itemMap[key] as Map<String, dynamic>;
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Rincian Waterpass'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Info Header
-            Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      body: AppBackground(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              HistoryInputContainer(
+                label: 'INFORMASI',
+                children: [
+                  HistoryInputWithLabel(
+                    label: 'Nama',
+                    isFirst: true,
+                    child: Text(
+                      towerName ?? '-',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
+                  ),
+                  HistoryInputWithLabel(
+                    label: 'Tanggal',
+                    child: Text(
+                      formatHistoryDate(createdAt),
+                      style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+                    ),
+                  ),
+                ],
+              ),
+
+              if (fotoSebelum != null && fotoSebelum.isNotEmpty)
+                HistoryInputContainer(
+                  label: 'FOTO SEBELUM INSPEKSI',
                   children: [
-                    const Text(
-                      'INFORMASI',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text('Nama Objek', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.namaTower ?? '-',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text('Tanggal Inspeksi', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.createdAt ?? '-',
-                      style: const TextStyle(fontSize: 14),
-                    ),
+                    HistoryImageDisplay(url: fotoSebelum),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
 
-            // Foto Sebelum
-            if (item.fotoSebelumUrl != null)
-              Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: _buildImageTile(context, 'FOTO SEBELUM INSPEKSI', item.fotoSebelumUrl),
+              ...availableAxes.entries.map((entry) {
+                final axisData = entry.value;
+                final axisLabel = _keyMap[entry.key] ?? entry.key;
+                final pictUrl = axisData['pict'] is Map
+                    ? axisData['pict']['uri']?.toString()
+                    : axisData['pict']?.toString();
+                final hasil = axisData['hasil']?.toString() ?? '-';
+
+                return HistoryInputContainer(
+                  label: axisLabel,
+                  children: [
+                    if (pictUrl != null && pictUrl.isNotEmpty)
+                      HistoryInputWithLabel(
+                        label: 'Foto Hasil',
+                        isFirst: true,
+                        child: HistoryImageDisplay(url: pictUrl),
+                      ),
+                    HistoryInputWithLabel(
+                      label: 'Hasil',
+                      isFirst: pictUrl == null || pictUrl.isEmpty,
+                      child: Text(
+                        hasil,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+
+              if (fotoSetelah != null && fotoSetelah.isNotEmpty)
+                HistoryInputContainer(
+                  label: 'FOTO SETELAH INSPEKSI',
+                  children: [
+                    HistoryImageDisplay(url: fotoSetelah),
+                  ],
                 ),
-              ),
-            const SizedBox(height: 16),
-
-            // Sumbu X, Y, Z
-            _buildAxisCard(context, 'WATERPASS X', item.hasilX, item.fotoXUrl),
-            _buildAxisCard(context, 'WATERPASS Y', item.hasilY, item.fotoYUrl),
-            _buildAxisCard(context, 'WATERPASS Z', item.hasilZ, item.fotoZUrl),
-
-            // Foto Setelah
-            if (item.fotoSetelahUrl != null)
-              Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: _buildImageTile(context, 'FOTO SETELAH INSPEKSI', item.fotoSetelahUrl),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

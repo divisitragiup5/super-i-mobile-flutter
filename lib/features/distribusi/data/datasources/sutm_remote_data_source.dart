@@ -495,8 +495,8 @@ class SutmRemoteDataSourceImpl implements SutmRemoteDataSource {
       final response = await apiClient.get(
         '/gama/distribusi/max/performa-$type/petugas/mobile/score/history',
         queryParameters: {
-          if (bulan != null) 'bulan': bulan,
-          if (tahun != null) 'tahun': tahun,
+          'bulan': ?bulan,
+          'tahun': ?tahun,
         },
       );
       return response.data as Map<String, dynamic>;

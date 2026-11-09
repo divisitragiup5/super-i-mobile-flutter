@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../utils/app_url_utils.dart';
 import 'field_camera_widget.dart';
 
 /// Komponen Input Foto Lapangan (pengganti PictInput di React Native)
@@ -12,6 +13,7 @@ class FieldPictInput extends StatelessWidget {
   final ValueChanged<File?> onChange;
   final bool isRequired;
   final String? errorText;
+  final bool forceLandscape;
 
   const FieldPictInput({
     super.key,
@@ -22,12 +24,14 @@ class FieldPictInput extends StatelessWidget {
     this.initialUrl,
     this.isRequired = false,
     this.errorText,
+    this.forceLandscape = false,
   });
 
   Future<void> _openCamera(BuildContext context) async {
     final file = await FieldCameraWidget.open(
       context,
       title: label,
+      forceLandscape: forceLandscape,
     );
     if (file != null) {
       onChange(file);
@@ -46,7 +50,22 @@ class FieldPictInput extends StatelessWidget {
             InteractiveViewer(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image(image: imageProvider, fit: BoxFit.contain),
+                child: Image(
+                  image: imageProvider,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    padding: const EdgeInsets.all(24),
+                    color: Colors.white,
+                    child: const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('Gagal memuat gambar preview'),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
             Positioned(
@@ -66,7 +85,8 @@ class FieldPictInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool hasFile = pictureFile != null && pictureFile!.existsSync();
-    final bool hasUrl = initialUrl != null && initialUrl!.isNotEmpty;
+    final bool hasUrl = initialUrl != null && initialUrl!.trim().isNotEmpty;
+    final String fullImageUrl = hasUrl ? AppUrlUtils.getFullImageUrl(initialUrl) : '';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,7 +106,7 @@ class FieldPictInput extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 6),
-        if (hasFile || hasUrl) ...[
+        if (hasFile || (hasUrl && fullImageUrl.isNotEmpty)) ...[
           // Tampilan Preview Gambar dengan Tombol Hapus
           Container(
             height: 180,
@@ -104,12 +124,38 @@ class FieldPictInput extends StatelessWidget {
                     onTap: () {
                       final provider = hasFile
                           ? FileImage(pictureFile!) as ImageProvider
-                          : NetworkImage(initialUrl!) as ImageProvider;
+                          : NetworkImage(fullImageUrl) as ImageProvider;
                       _showImagePreview(context, provider);
                     },
                     child: hasFile
                         ? Image.file(pictureFile!, fit: BoxFit.cover)
-                        : Image.network(initialUrl!, fit: BoxFit.cover),
+                        : Image.network(
+                            fullImageUrl,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) => const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.broken_image_outlined, size: 36, color: Colors.grey),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Gagal memuat foto',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                   ),
                   // Tombol Hapus Foto
                   Positioned(

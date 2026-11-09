@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/storage/local_database.dart';
+import '../../../line_walker/domain/repositories/line_walker_repository.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
@@ -10,11 +13,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginUseCase loginUseCase;
   final GetCurrentUserUseCase getCurrentUserUseCase;
   final LogoutUseCase logoutUseCase;
+  final LineWalkerRepository? lineWalkerRepository;
 
   AuthBloc({
     required this.loginUseCase,
     required this.getCurrentUserUseCase,
     required this.logoutUseCase,
+    this.lineWalkerRepository,
   }) : super(AuthInitial()) {
     // Daftarkan handler untuk masing-masing event
     on<AuthLoginRequested>(_onLoginRequested);
@@ -37,7 +42,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     // (kiri = failure, kanan = user)
     result.fold(
       (failure) => emit(AuthFailureState(failure.message)),
-      (user) => emit(AuthAuthenticated(user)),
+      (user) {
+        emit(AuthAuthenticated(user));
+        // Prefetch seluruh tower/objek Line Walker di background
+        unawaited(lineWalkerRepository?.prefetchTowers() ?? Future.value());
+      },
     );
   }
 
@@ -52,7 +61,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold(
       (failure) => emit(AuthUnauthenticated()),
-      (user) => emit(AuthAuthenticated(user)),
+      (user) {
+        emit(AuthAuthenticated(user));
+        // Prefetch seluruh tower/objek Line Walker di background
+        unawaited(lineWalkerRepository?.prefetchTowers() ?? Future.value());
+      },
     );
   }
 
@@ -63,6 +76,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     await logoutUseCase();
+    // Bersihkan seluruh cache API saat user logout
+    await LocalDatabase.instance.clearApiCache();
     emit(AuthUnauthenticated());
   }
 }

@@ -1,15 +1,17 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_input_label.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/field_pict_input.dart';
 import '../../../../core/widgets/field_signature_pad.dart';
 import '../../../../core/widgets/searchable_dropdown.dart';
+import '../../../home/presentation/cubit/drafts_cubit.dart';
 import '../../data/models/ppl_model.dart';
 import '../../data/models/tower_asset_model.dart';
 import '../cubit/ppl_cubit.dart';
@@ -32,12 +34,12 @@ class _PplFormPageState extends State<PplFormPage> {
   TowerAssetModel? _selectedTower;
 
   final TextEditingController _namaPekerjaanCtrl = TextEditingController();
-  String _jenisObjek = 'Rumah';
+  String? _jenisObjek;
   final TextEditingController _ketJenisObjekCtrl = TextEditingController();
-  String _kategoriObjek = 'Aman';
+  String? _kategoriObjek;
   final TextEditingController _ketKategoriObjekCtrl = TextEditingController();
-  String _statusObjek = 'Permanen';
-  String _statusPekerjaan = 'Tidak Ada Aktifitas';
+  String? _statusObjek;
+  String? _statusPekerjaan;
   final TextEditingController _progressPekerjaanCtrl = TextEditingController();
   final TextEditingController _pihakPelaksanaCtrl = TextEditingController();
   final TextEditingController _pjPekerjaanCtrl = TextEditingController();
@@ -45,7 +47,7 @@ class _PplFormPageState extends State<PplFormPage> {
   final TextEditingController _tanggapanCtrl = TextEditingController();
   final TextEditingController _namaValidatorCtrl = TextEditingController();
 
-  DateTime _suratSosialisasi = DateTime.now();
+  DateTime? _suratSosialisasi;
   final TextEditingController _lokasiCtrl = TextEditingController();
   double _latitude = 0.0;
   double _longitude = 0.0;
@@ -63,12 +65,27 @@ class _PplFormPageState extends State<PplFormPage> {
   File? _ttdTLGI;
   final TextEditingController _namaTTDTLGICtrl = TextEditingController();
 
+  String _identifier = '';
+  bool _isPartialDisabled = false;
+
   @override
   void initState() {
     super.initState();
+    final rawId = widget.initialDraft?['identifier']?.toString();
+    _identifier = (rawId != null && rawId.isNotEmpty)
+        ? rawId
+        : 'ppl-${DateTime.now().millisecondsSinceEpoch}';
+    _isPartialDisabled = widget.initialDraft?['partialDisabled'] == 'true' ||
+        widget.initialDraft?['partialDisabled'] == true;
+
+    _namaTTDTLGICtrl.addListener(_onFieldChanged);
     context.read<PplCubit>().loadTowers();
     _fetchCurrentLocation();
     _loadInitialDraft();
+  }
+
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _fetchCurrentLocation() async {
@@ -87,19 +104,24 @@ class _PplFormPageState extends State<PplFormPage> {
   void _loadInitialDraft() {
     if (widget.initialDraft != null) {
       final d = widget.initialDraft!;
-      if (d['towerId'] != null) {
-        _selectedTower = TowerAssetModel(
-          id: d['towerId'] as int,
-          nama: d['namaTower']?.toString() ?? 'Tower',
-        );
+      if (d['towerId'] != null || d['tower'] != null || d['namaTower'] != null) {
+        final tId = d['towerId'] ?? (d['tower'] is Map ? d['tower']['id'] : null);
+        final tNama = d['namaTower'] ?? (d['tower'] is Map ? d['tower']['nama'] : null) ?? 'Tower';
+        if (tId != null) {
+          final parsedId = tId is int ? tId : int.tryParse('$tId') ?? 0;
+          _selectedTower = TowerAssetModel(
+            id: parsedId,
+            nama: tNama.toString(),
+          );
+        }
       }
       _namaPekerjaanCtrl.text = d['namaPekerjaan'] ?? '';
-      _jenisObjek = d['jenisObjek'] ?? 'Rumah';
+      _jenisObjek = d['jenisObjek']?.toString();
       _ketJenisObjekCtrl.text = d['keteranganJenisObjek'] ?? '';
-      _kategoriObjek = d['kategoriObjek'] ?? 'Aman';
+      _kategoriObjek = d['kategoriObjek']?.toString();
       _ketKategoriObjekCtrl.text = d['keteranganKategoriObjek'] ?? '';
-      _statusObjek = d['statusObjek'] ?? 'Permanen';
-      _statusPekerjaan = d['statusPekerjaan'] ?? 'Tidak Ada Aktifitas';
+      _statusObjek = d['statusObjek']?.toString();
+      _statusPekerjaan = d['statusPekerjaan']?.toString();
       _progressPekerjaanCtrl.text = d['progressPekerjaan'] ?? '';
       _pihakPelaksanaCtrl.text = d['pihakPelaksana'] ?? '';
       _pjPekerjaanCtrl.text = d['pjPekerjaan'] ?? '';
@@ -107,7 +129,7 @@ class _PplFormPageState extends State<PplFormPage> {
       _tanggapanCtrl.text = d['tanggapan'] ?? '';
       _namaValidatorCtrl.text = d['namaValidator'] ?? '';
       if (d['suratSosialisasi'] != null) {
-        _suratSosialisasi = DateTime.tryParse(d['suratSosialisasi']) ?? DateTime.now();
+        _suratSosialisasi = DateTime.tryParse(d['suratSosialisasi'].toString());
       }
       _lokasiCtrl.text = d['lokasi'] ?? '';
       _latitude = (d['latitude'] as num?)?.toDouble() ?? 0.0;
@@ -130,6 +152,7 @@ class _PplFormPageState extends State<PplFormPage> {
 
   @override
   void dispose() {
+    _namaTTDTLGICtrl.removeListener(_onFieldChanged);
     _namaPekerjaanCtrl.dispose();
     _ketJenisObjekCtrl.dispose();
     _ketKategoriObjekCtrl.dispose();
@@ -146,33 +169,25 @@ class _PplFormPageState extends State<PplFormPage> {
     super.dispose();
   }
 
-  Future<File> _base64ToFile(String base64Str, String name) async {
-    final cleanBase64 = base64Str.contains(',') ? base64Str.split(',')[1] : base64Str;
-    final bytes = base64Decode(cleanBase64);
-    final tempDir = await getTemporaryDirectory();
-    final file = File('${tempDir.path}/${name}_${DateTime.now().millisecondsSinceEpoch}.png');
-    await file.writeAsBytes(bytes);
-    return file;
-  }
-
   PPLInputModel _buildInputModel() {
     return PPLInputModel(
       towerId: _selectedTower?.id ?? 0,
       namaTower: _selectedTower?.nama,
+      identifier: _identifier,
       namaPekerjaan: _namaPekerjaanCtrl.text.trim(),
-      jenisObjek: _jenisObjek,
+      jenisObjek: _jenisObjek ?? '',
       keteranganJenisObjek: _ketJenisObjekCtrl.text.trim(),
-      kategoriObjek: _kategoriObjek,
+      kategoriObjek: _kategoriObjek ?? '',
       keteranganKategoriObjek: _ketKategoriObjekCtrl.text.trim(),
-      statusObjek: _statusObjek,
-      statusPekerjaan: _statusPekerjaan,
+      statusObjek: _statusObjek ?? '',
+      statusPekerjaan: _statusPekerjaan ?? '',
       progressPekerjaan: _progressPekerjaanCtrl.text.trim(),
       pihakPelaksana: _pihakPelaksanaCtrl.text.trim(),
       pjPekerjaan: _pjPekerjaanCtrl.text.trim(),
       noTeleponPJPekerjaan: _noTeleponPJCtrl.text.trim(),
       tanggapan: _tanggapanCtrl.text.trim(),
       namaValidator: _namaValidatorCtrl.text.trim(),
-      suratSosialisasi: _suratSosialisasi,
+      suratSosialisasi: _suratSosialisasi ?? DateTime.now(),
       lokasi: _lokasiCtrl.text.trim(),
       latitude: _latitude,
       longitude: _longitude,
@@ -188,47 +203,99 @@ class _PplFormPageState extends State<PplFormPage> {
     );
   }
 
+  String? _validateForm() {
+    if (_selectedTower == null) {
+      return 'Pilih objek tower terlebih dahulu';
+    }
+    if (_namaPekerjaanCtrl.text.trim().isEmpty) {
+      return 'Nama pekerjaan wajib diisi';
+    }
+    if (_jenisObjek == null || _jenisObjek!.isEmpty) {
+      return 'Pilih jenis objek terlebih dahulu';
+    }
+    if (_ketJenisObjekCtrl.text.trim().isEmpty) {
+      return 'Keterangan jenis objek wajib diisi';
+    }
+    if (_kategoriObjek == null || _kategoriObjek!.isEmpty) {
+      return 'Pilih kategori objek terlebih dahulu';
+    }
+    if (_ketKategoriObjekCtrl.text.trim().isEmpty) {
+      return 'Keterangan kategori objek wajib diisi';
+    }
+    if (_statusObjek == null || _statusObjek!.isEmpty) {
+      return 'Pilih status objek terlebih dahulu';
+    }
+    if (_statusPekerjaan == null || _statusPekerjaan!.isEmpty) {
+      return 'Pilih status pekerjaan terlebih dahulu';
+    }
+    if (_progressPekerjaanCtrl.text.trim().isEmpty) {
+      return 'Progress pekerjaan wajib diisi';
+    }
+    if (_pihakPelaksanaCtrl.text.trim().isEmpty) {
+      return 'Pihak pelaksana wajib diisi';
+    }
+    if (_pjPekerjaanCtrl.text.trim().isEmpty) {
+      return 'Penanggung jawab pekerjaan wajib diisi';
+    }
+    if (_noTeleponPJCtrl.text.trim().isEmpty) {
+      return 'Nomor telepon penanggung jawab wajib diisi';
+    }
+    if (_tanggapanCtrl.text.trim().isEmpty) {
+      return 'Tanggapan wajib diisi';
+    }
+    if (_namaValidatorCtrl.text.trim().isEmpty) {
+      return 'Nama validator wajib diisi';
+    }
+    if (_suratSosialisasi == null) {
+      return 'Pilih tanggal surat sosialisasi terlebih dahulu';
+    }
+    if (_dokumentasiPerwakilan == null) {
+      return 'Foto dokumentasi perwakilan wajib diambil';
+    }
+    if (_dokumentasiObjek == null) {
+      return 'Foto dokumentasi objek wajib diambil';
+    }
+    if (_dokumentasiSekitar == null) {
+      return 'Foto dokumentasi sekitar wajib diambil';
+    }
+    if (_namaTTDLineWalkerCtrl.text.trim().isEmpty || _ttdLineWalker == null) {
+      return 'Tanda tangan dan nama Line Walker wajib diisi';
+    }
+    if (_namaTTDPJPekerjaanCtrl.text.trim().isEmpty || _ttdPJPekerjaan == null) {
+      return 'Tanda tangan dan nama PJ Pekerjaan wajib diisi';
+    }
+    if ((_ttdTLGI != null && _namaTTDTLGICtrl.text.trim().isEmpty) ||
+        (_ttdTLGI == null && _namaTTDTLGICtrl.text.trim().isNotEmpty)) {
+      return 'Lengkapi tanda tangan dan nama Team Leader GI jika diisi';
+    }
+    return null;
+  }
+
   Future<void> _handleSaveDraft() async {
+    final error = _validateForm();
+    if (error != null) {
+      _showError(error);
+      return;
+    }
+
     final input = _buildInputModel();
     await context.read<PplCubit>().saveDraft(input);
+    try {
+      sl<DraftsCubit>().loadDrafts();
+    } catch (_) {}
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Data PPL berhasil disimpan sebagai draft offline'),
-          backgroundColor: AppColors.success,
-        ),
+      AppSnackbar.showSuccess(
+        context,
+        'Data PPL berhasil disimpan sebagai draft offline',
       );
       context.pop();
     }
   }
 
   void _handleSubmit() {
-    if (_selectedTower == null) {
-      _showError('Pilih objek tower terlebih dahulu');
-      return;
-    }
-    if (_namaPekerjaanCtrl.text.trim().isEmpty) {
-      _showError('Nama pekerjaan wajib diisi');
-      return;
-    }
-    if (_pihakPelaksanaCtrl.text.trim().isEmpty) {
-      _showError('Pihak pelaksana wajib diisi');
-      return;
-    }
-    if (_pjPekerjaanCtrl.text.trim().isEmpty) {
-      _showError('Penanggung jawab pekerjaan wajib diisi');
-      return;
-    }
-    if (_noTeleponPJCtrl.text.trim().isEmpty) {
-      _showError('Nomor telepon penanggung jawab wajib diisi');
-      return;
-    }
-    if (_namaTTDLineWalkerCtrl.text.trim().isEmpty || _ttdLineWalker == null) {
-      _showError('Tanda tangan dan nama Line Walker wajib diisi');
-      return;
-    }
-    if (_namaTTDPJPekerjaanCtrl.text.trim().isEmpty || _ttdPJPekerjaan == null) {
-      _showError('Tanda tangan dan nama PJ Pekerjaan wajib diisi');
+    final error = _validateForm();
+    if (error != null) {
+      _showError(error);
       return;
     }
 
@@ -237,9 +304,7 @@ class _PplFormPageState extends State<PplFormPage> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: AppColors.danger),
-    );
+    AppSnackbar.showError(context, message);
   }
 
   @override
@@ -260,22 +325,10 @@ class _PplFormPageState extends State<PplFormPage> {
       body: BlocConsumer<PplCubit, PplState>(
         listener: (context, state) {
           if (state is PplSubmitSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppColors.success),
-            );
+            AppSnackbar.showSuccess(context, state.message);
             context.pop();
           } else if (state is PplSubmitFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.danger,
-                action: SnackBarAction(
-                  label: 'Simpan Offline',
-                  textColor: Colors.white,
-                  onPressed: _handleSaveDraft,
-                ),
-              ),
-            );
+            AppSnackbar.showError(context, state.message);
           }
         },
         builder: (context, state) {
@@ -283,6 +336,27 @@ class _PplFormPageState extends State<PplFormPage> {
           List<TowerAssetModel> towers = [];
           if (state is PplLoaded) {
             towers = state.towers;
+            if (_selectedTower != null && (_selectedTower!.nama == 'Tower' || _selectedTower!.nama.isEmpty)) {
+              final matching = towers.where((t) => t.id == _selectedTower!.id).firstOrNull;
+              if (matching != null) {
+                _selectedTower = matching;
+              }
+            }
+          }
+
+          final List<DropdownItem<int>> towerItems = towers
+              .map((t) => DropdownItem<int>(value: t.id, label: t.nama))
+              .toList();
+
+          if (_selectedTower != null &&
+              !towerItems.any((it) => it.value == _selectedTower!.id)) {
+            towerItems.insert(
+              0,
+              DropdownItem<int>(
+                value: _selectedTower!.id,
+                label: _selectedTower!.nama,
+              ),
+            );
           }
 
           return SingleChildScrollView(
@@ -308,107 +382,116 @@ class _PplFormPageState extends State<PplFormPage> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        SearchableDropdown<int>(
-                          label: 'Tower',
-                          hint: 'Pilih tower...',
-                          isRequired: true,
-                          value: _selectedTower?.id,
-                          items: towers
-                              .map((t) => DropdownItem<int>(value: t.id, label: t.nama))
-                              .toList(),
-                          onChanged: (id) {
-                            if (id != null) {
-                              final tower = towers.firstWhere((t) => t.id == id);
-                              setState(() => _selectedTower = tower);
-                              context.read<PplCubit>().selectTower(tower);
-                            }
-                          },
+                        Opacity(
+                          opacity: _isPartialDisabled ? 0.7 : 1.0,
+                          child: IgnorePointer(
+                            ignoring: _isPartialDisabled,
+                            child: SearchableDropdown<int>(
+                              label: 'Tower',
+                              hint: 'Pilih tower...',
+                              isRequired: true,
+                              isLoading: state is PplLoading || (towers.isEmpty && state is! PplLoaded),
+                              value: _selectedTower?.id,
+                              items: towerItems,
+                              onChanged: (id) {
+                                if (id != null) {
+                                  final tower = towerItems.firstWhere((t) => t.value == id);
+                                  setState(() => _selectedTower = TowerAssetModel(id: tower.value, nama: tower.label));
+                                  context.read<PplCubit>().selectTower(TowerAssetModel(id: tower.value, nama: tower.label));
+                                }
+                              },
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _namaPekerjaanCtrl,
                           decoration: InputDecoration(
-                            labelText: 'Nama Pekerjaan *',
+                            label: const AppInputLabel('Nama Pekerjaan', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _jenisObjek,
+                          initialValue: _jenisObjek,
+                          hint: const Text('Pilih jenis objek'),
                           decoration: InputDecoration(
-                            labelText: 'Jenis Objek',
+                            label: const AppInputLabel('Jenis Objek', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           items: [
                             'Rumah', 'Gedung', 'Bangunan', 'Kegiatan', 'Pekerjaan', 'Proyek', 'Lain-lain'
                           ].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
                           onChanged: (val) {
-                            if (val != null) setState(() => _jenisObjek = val);
+                            setState(() => _jenisObjek = val);
                           },
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _ketJenisObjekCtrl,
                           decoration: InputDecoration(
-                            labelText: 'Keterangan Jenis Objek',
+                            label: const AppInputLabel('Keterangan Jenis Objek', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _kategoriObjek,
+                          initialValue: _kategoriObjek,
+                          hint: const Text('Pilih kategori objek'),
                           decoration: InputDecoration(
-                            labelText: 'Kategori Objek',
+                            label: const AppInputLabel('Kategori Objek', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           items: ['Aman', 'Bahaya', 'Waspada', 'Kritis']
                               .map((v) => DropdownMenuItem(value: v, child: Text(v)))
                               .toList(),
                           onChanged: (val) {
-                            if (val != null) setState(() => _kategoriObjek = val);
+                            setState(() => _kategoriObjek = val);
                           },
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _ketKategoriObjekCtrl,
                           decoration: InputDecoration(
-                            labelText: 'Keterangan Kategori Objek',
+                            label: const AppInputLabel('Keterangan Kategori Objek', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _statusObjek,
+                          initialValue: _statusObjek,
+                          hint: const Text('Pilih status objek'),
                           decoration: InputDecoration(
-                            labelText: 'Status Objek',
+                            label: const AppInputLabel('Status Objek', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           items: ['Permanen', 'Sementara', 'Sedang Berjalan']
                               .map((v) => DropdownMenuItem(value: v, child: Text(v)))
                               .toList(),
                           onChanged: (val) {
-                            if (val != null) setState(() => _statusObjek = val);
+                            setState(() => _statusObjek = val);
                           },
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _statusPekerjaan,
+                          initialValue: _statusPekerjaan,
+                          hint: const Text('Pilih status pekerjaan'),
                           decoration: InputDecoration(
-                            labelText: 'Status Pekerjaan',
+                            label: const AppInputLabel('Status Pekerjaan', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           items: ['Tidak Ada Aktifitas', 'In Progess', 'Selesai']
                               .map((v) => DropdownMenuItem(value: v, child: Text(v)))
                               .toList(),
                           onChanged: (val) {
-                            if (val != null) setState(() => _statusPekerjaan = val);
+                            setState(() => _statusPekerjaan = val);
                           },
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _progressPekerjaanCtrl,
                           decoration: InputDecoration(
-                            labelText: 'Progress Pekerjaan',
+                            label: const AppInputLabel('Progress Pekerjaan', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
@@ -439,7 +522,7 @@ class _PplFormPageState extends State<PplFormPage> {
                         TextField(
                           controller: _pihakPelaksanaCtrl,
                           decoration: InputDecoration(
-                            labelText: 'Pihak Pelaksana *',
+                            label: const AppInputLabel('Pihak Pelaksana', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
@@ -447,7 +530,7 @@ class _PplFormPageState extends State<PplFormPage> {
                         TextField(
                           controller: _pjPekerjaanCtrl,
                           decoration: InputDecoration(
-                            labelText: 'PJ Pekerjaan *',
+                            label: const AppInputLabel('PJ Pekerjaan', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
@@ -456,7 +539,7 @@ class _PplFormPageState extends State<PplFormPage> {
                           controller: _noTeleponPJCtrl,
                           keyboardType: TextInputType.phone,
                           decoration: InputDecoration(
-                            labelText: 'No. Telepon PJ Pekerjaan *',
+                            label: const AppInputLabel('No. Telepon PJ Pekerjaan', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
@@ -465,7 +548,7 @@ class _PplFormPageState extends State<PplFormPage> {
                           controller: _tanggapanCtrl,
                           maxLines: 2,
                           decoration: InputDecoration(
-                            labelText: 'Tanggapan',
+                            label: const AppInputLabel('Tanggapan', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
@@ -473,33 +556,32 @@ class _PplFormPageState extends State<PplFormPage> {
                         TextField(
                           controller: _namaValidatorCtrl,
                           decoration: InputDecoration(
-                            labelText: 'Nama Validator',
+                            label: const AppInputLabel('Nama Validator', isRequired: true),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
                         const SizedBox(height: 12),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('Surat Sosialisasi'),
-                          subtitle: Text(DateFormat('dd MMMM yyyy').format(_suratSosialisasi)),
+                          title: const AppInputLabel('Surat Sosialisasi', isRequired: true),
+                          subtitle: Text(
+                            _suratSosialisasi != null
+                                ? DateFormat('dd MMMM yyyy').format(_suratSosialisasi!)
+                                : 'Pilih tanggal surat sosialisasi',
+                            style: TextStyle(
+                              color: _suratSosialisasi != null ? Colors.black87 : Colors.grey.shade600,
+                            ),
+                          ),
                           trailing: const Icon(Icons.calendar_today),
                           onTap: () async {
                             final picked = await showDatePicker(
                               context: context,
-                              initialDate: _suratSosialisasi,
+                              initialDate: _suratSosialisasi ?? DateTime.now(),
                               firstDate: DateTime(2020),
                               lastDate: DateTime(2030),
                             );
                             if (picked != null) setState(() => _suratSosialisasi = picked);
                           },
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _lokasiCtrl,
-                          decoration: InputDecoration(
-                            labelText: 'Lokasi',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
                         ),
                       ],
                     ),
@@ -518,6 +600,8 @@ class _PplFormPageState extends State<PplFormPage> {
                         FieldPictInput(
                           label: 'Dokumentasi Perwakilan',
                           placeholder: 'Ambil Foto Perwakilan',
+                          isRequired: true,
+                          forceLandscape: true,
                           pictureFile: _dokumentasiPerwakilan,
                           onChange: (f) => setState(() => _dokumentasiPerwakilan = f),
                         ),
@@ -525,6 +609,8 @@ class _PplFormPageState extends State<PplFormPage> {
                         FieldPictInput(
                           label: 'Dokumentasi Objek',
                           placeholder: 'Ambil Foto Objek',
+                          isRequired: true,
+                          forceLandscape: true,
                           pictureFile: _dokumentasiObjek,
                           onChange: (f) => setState(() => _dokumentasiObjek = f),
                         ),
@@ -532,6 +618,8 @@ class _PplFormPageState extends State<PplFormPage> {
                         FieldPictInput(
                           label: 'Dokumentasi Sekitar',
                           placeholder: 'Ambil Foto Sekitar Objek',
+                          isRequired: true,
+                          forceLandscape: true,
                           pictureFile: _dokumentasiSekitar,
                           onChange: (f) => setState(() => _dokumentasiSekitar = f),
                         ),
@@ -560,62 +648,35 @@ class _PplFormPageState extends State<PplFormPage> {
                         ),
                         const SizedBox(height: 16),
                         // TTD Line Walker
-                        _buildSignatureSection(
-                          title: 'Tanda Tangan Line Walker *',
-                          file: _ttdLineWalker,
-                          nameCtrl: _namaTTDLineWalkerCtrl,
-                          nameLabel: 'Nama Lengkap Line Walker *',
-                          onSign: () async {
-                            final base64 = await FieldSignaturePad.show(
-                              context,
-                              title: 'TTD Line Walker',
-                              signerName: _namaTTDLineWalkerCtrl.text,
-                            );
-                            if (base64 != null) {
-                              final f = await _base64ToFile(base64, 'ttdLineWalker');
-                              setState(() => _ttdLineWalker = f);
-                            }
-                          },
+                        FieldSignatureInput(
+                          label: 'Tanda Tangan Line Walker',
+                          isRequired: true,
+                          signatureFile: _ttdLineWalker,
+                          signerName: _namaTTDLineWalkerCtrl.text,
+                          onSignatureChanged: (file) => setState(() => _ttdLineWalker = file),
+                          onNameChanged: (name) => setState(() => _namaTTDLineWalkerCtrl.text = name),
                         ),
                         const Divider(height: 32),
 
                         // TTD PJ Pekerjaan
-                        _buildSignatureSection(
-                          title: 'Tanda Tangan PJ Pekerjaan *',
-                          file: _ttdPJPekerjaan,
-                          nameCtrl: _namaTTDPJPekerjaanCtrl,
-                          nameLabel: 'Nama Lengkap PJ Pekerjaan *',
-                          onSign: () async {
-                            final base64 = await FieldSignaturePad.show(
-                              context,
-                              title: 'TTD PJ Pekerjaan',
-                              signerName: _namaTTDPJPekerjaanCtrl.text,
-                            );
-                            if (base64 != null) {
-                              final f = await _base64ToFile(base64, 'ttdPJPekerjaan');
-                              setState(() => _ttdPJPekerjaan = f);
-                            }
-                          },
+                        FieldSignatureInput(
+                          label: 'Tanda Tangan PJ Pekerjaan',
+                          isRequired: true,
+                          signatureFile: _ttdPJPekerjaan,
+                          signerName: _namaTTDPJPekerjaanCtrl.text,
+                          onSignatureChanged: (file) => setState(() => _ttdPJPekerjaan = file),
+                          onNameChanged: (name) => setState(() => _namaTTDPJPekerjaanCtrl.text = name),
                         ),
                         const Divider(height: 32),
 
                         // TTD TL GI (Opsional)
-                        _buildSignatureSection(
-                          title: 'Tanda Tangan TL GI (Opsional)',
-                          file: _ttdTLGI,
-                          nameCtrl: _namaTTDTLGICtrl,
-                          nameLabel: 'Nama Lengkap TL GI',
-                          onSign: () async {
-                            final base64 = await FieldSignaturePad.show(
-                              context,
-                              title: 'TTD TL GI',
-                              signerName: _namaTTDTLGICtrl.text,
-                            );
-                            if (base64 != null) {
-                              final f = await _base64ToFile(base64, 'ttdTLGI');
-                              setState(() => _ttdTLGI = f);
-                            }
-                          },
+                        FieldSignatureInput(
+                          label: 'Tanda Tangan TL GI (Opsional)',
+                          isRequired: false,
+                          signatureFile: _ttdTLGI,
+                          signerName: _namaTTDTLGICtrl.text,
+                          onSignatureChanged: (file) => setState(() => _ttdTLGI = file),
+                          onNameChanged: (name) => setState(() => _namaTTDTLGICtrl.text = name),
                         ),
                       ],
                     ),
@@ -648,48 +709,6 @@ class _PplFormPageState extends State<PplFormPage> {
           );
         },
       ),
-    );
-  }
-
-  Widget _buildSignatureSection({
-    required String title,
-    required File? file,
-    required TextEditingController nameCtrl,
-    required String nameLabel,
-    required VoidCallback onSign,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        TextField(
-          controller: nameCtrl,
-          decoration: InputDecoration(
-            labelText: nameLabel,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (file != null) ...[
-          Container(
-            height: 100,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.white,
-            ),
-            child: Image.file(file, fit: BoxFit.contain),
-          ),
-          const SizedBox(height: 8),
-        ],
-        OutlinedButton.icon(
-          onPressed: onSign,
-          icon: const Icon(Icons.draw_outlined),
-          label: Text(file != null ? 'Ubah Tanda Tangan' : 'Buat Tanda Tangan'),
-        ),
-      ],
     );
   }
 }

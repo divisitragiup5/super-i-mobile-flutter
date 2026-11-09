@@ -136,29 +136,80 @@ class PPLInputModel {
 
 class PPLHistoryItemModel {
   final int id;
+  final int towerId;
+  final String identifier;
   final String? namaPekerjaan;
   final String? namaTower;
-  final String? createdAt;
+  final String? pihakPelaksana;
+  final String pplStatus;
+  final String? kategoriObjek;
+  final String? statusObjek;
   final String? statusPekerjaan;
   final String? progressPekerjaan;
+  final String? createdAt;
+  final int totalUpdate;
+  final int belumTTDTLGI;
+  final int sudahTTDTLGI;
+  final String? ttdTLGI;
+  final String? namaTTDTLGI;
+  final bool isLocked;
+  final Map<String, dynamic> rawJson;
 
   PPLHistoryItemModel({
     required this.id,
+    required this.towerId,
+    required this.identifier,
     this.namaPekerjaan,
     this.namaTower,
-    this.createdAt,
+    this.pihakPelaksana,
+    this.pplStatus = 'normal',
+    this.kategoriObjek,
+    this.statusObjek,
     this.statusPekerjaan,
     this.progressPekerjaan,
+    this.createdAt,
+    this.totalUpdate = 0,
+    this.belumTTDTLGI = 0,
+    this.sudahTTDTLGI = 0,
+    this.ttdTLGI,
+    this.namaTTDTLGI,
+    this.isLocked = false,
+    this.rawJson = const {},
   });
 
   factory PPLHistoryItemModel.fromJson(Map<String, dynamic> json) {
+    final towerMap = json['tower'] is Map ? json['tower'] as Map<String, dynamic> : null;
+    final tId = towerMap != null && towerMap['id'] != null
+        ? (towerMap['id'] is int ? towerMap['id'] as int : int.tryParse('${towerMap['id']}') ?? 0)
+        : (json['towerId'] is int ? json['towerId'] as int : int.tryParse('${json['towerId']}') ?? 0);
+
     return PPLHistoryItemModel(
-      id: json['id'] is int ? json['id'] : int.tryParse('${json['id']}') ?? 0,
+      id: json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}') ?? 0,
+      towerId: tId,
+      identifier: json['identifier']?.toString() ?? '',
       namaPekerjaan: json['namaPekerjaan']?.toString(),
-      namaTower: json['tower'] is Map ? json['tower']['nama']?.toString() : null,
-      createdAt: json['createdAt']?.toString(),
+      namaTower: towerMap != null ? towerMap['nama']?.toString() : json['namaTower']?.toString(),
+      pihakPelaksana: json['pihakPelaksana']?.toString(),
+      pplStatus: json['pplStatus']?.toString() ?? 'normal',
+      kategoriObjek: json['kategoriObjek']?.toString(),
+      statusObjek: json['statusObjek']?.toString(),
       statusPekerjaan: json['statusPekerjaan']?.toString(),
       progressPekerjaan: json['progressPekerjaan']?.toString(),
+      createdAt: json['createdAt']?.toString(),
+      totalUpdate: json['totalUpdate'] is int
+          ? json['totalUpdate'] as int
+          : int.tryParse('${json['totalUpdate']}') ?? 0,
+      belumTTDTLGI: json['belumTTDTLGI'] is int
+          ? json['belumTTDTLGI'] as int
+          : int.tryParse('${json['belumTTDTLGI']}') ?? 0,
+      sudahTTDTLGI: json['sudahTTDTLGI'] is int
+          ? json['sudahTTDTLGI'] as int
+          : int.tryParse('${json['sudahTTDTLGI']}') ?? 0,
+      ttdTLGI: json['ttdTLGI']?.toString(),
+      namaTTDTLGI: json['namaTTDTLGI']?.toString(),
+      isLocked: json['isLocked'] == true,
+      rawJson: json,
     );
   }
 }
+

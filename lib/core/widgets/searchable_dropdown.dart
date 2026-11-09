@@ -22,6 +22,7 @@ class SearchableDropdown<T> extends StatelessWidget {
   final ValueChanged<T?> onChanged;
   final bool isRequired;
   final String? errorText;
+  final bool isLoading;
 
   const SearchableDropdown({
     super.key,
@@ -32,9 +33,11 @@ class SearchableDropdown<T> extends StatelessWidget {
     this.value,
     this.isRequired = false,
     this.errorText,
+    this.isLoading = false,
   });
 
   void _showSearchModal(BuildContext context) {
+    if (isLoading) return;
     showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
@@ -80,12 +83,12 @@ class SearchableDropdown<T> extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         InkWell(
-          onTap: () => _showSearchModal(context),
+          onTap: isLoading ? null : () => _showSearchModal(context),
           borderRadius: BorderRadius.circular(10),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isLoading ? const Color(0xFFF8FAFC) : Colors.white,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: errorText != null
@@ -97,22 +100,37 @@ class SearchableDropdown<T> extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    selectedItem?.label ?? hint,
+                    isLoading
+                        ? 'Memuat data pilihan...'
+                        : (selectedItem?.label ?? hint),
                     style: TextStyle(
                       fontSize: 14,
-                      color: selectedItem != null
-                          ? const Color(0xFF0F172A)
-                          : const Color(0xFF94A3B8),
-                      fontWeight: selectedItem != null
+                      color: isLoading
+                          ? const Color(0xFF64748B)
+                          : selectedItem != null
+                              ? const Color(0xFF0F172A)
+                              : const Color(0xFF94A3B8),
+                      fontWeight: selectedItem != null && !isLoading
                           ? FontWeight.w500
                           : FontWeight.normal,
+                      fontStyle: isLoading ? FontStyle.italic : FontStyle.normal,
                     ),
                   ),
                 ),
-                const Icon(
-                  Icons.arrow_drop_down,
-                  color: Color(0xFF64748B),
-                ),
+                if (isLoading)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.primary,
+                    ),
+                  )
+                else
+                  const Icon(
+                    Icons.arrow_drop_down,
+                    color: Color(0xFF64748B),
+                  ),
               ],
             ),
           ),

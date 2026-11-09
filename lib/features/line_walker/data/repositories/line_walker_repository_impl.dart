@@ -6,10 +6,12 @@ import '../../domain/repositories/line_walker_repository.dart';
 import '../datasources/line_walker_remote_data_source.dart';
 import '../models/kegiatan_sosial_model.dart';
 import '../models/ketenagakerjaan_model.dart';
+import '../models/line_walker_performance_model.dart';
 import '../models/pembumian_model.dart';
 import '../models/ppl_model.dart';
 import '../models/tower_asset_model.dart';
 import '../models/waterpass_model.dart';
+import 'package:super_i_mobile/features/home/data/models/ppl_condition_summary_model.dart';
 
 class LineWalkerRepositoryImpl implements LineWalkerRepository {
   final LineWalkerRemoteDataSource remoteDataSource;
@@ -27,6 +29,26 @@ class LineWalkerRepositoryImpl implements LineWalkerRepository {
   }
 
   @override
+  Future<Either<Failure, LineWalkerPerformanceModel?>> getMyPerformance({
+    int? minggu,
+    String? bulan,
+    int? tahun,
+  }) async {
+    try {
+      final res = await remoteDataSource.getMyPerformance(
+        minggu: minggu,
+        bulan: bulan,
+        tahun: tahun,
+      );
+      return Right(res);
+    } catch (e) {
+      return Left(
+        ServerFailure(message: _extractError(e, 'Gagal memuat kinerja Line Walker')),
+      );
+    }
+  }
+
+  @override
   Future<Either<Failure, List<TowerAssetModel>>> getTowers({String type = 'GANTRY,TOWER'}) async {
     try {
       final res = await remoteDataSource.getTowers(type: type);
@@ -34,6 +56,16 @@ class LineWalkerRepositoryImpl implements LineWalkerRepository {
     } catch (e) {
       return Left(ServerFailure(message: _extractError(e, 'Gagal memuat tower')));
     }
+  }
+
+  @override
+  Future<void> prefetchTowers() async {
+    try {
+      await Future.wait([
+        remoteDataSource.getTowers(type: 'GANTRY,TOWER'),
+        remoteDataSource.getTowers(type: 'JOINT,SPAN'),
+      ]);
+    } catch (_) {}
   }
 
   // --- Waterpass ---
@@ -149,6 +181,16 @@ class LineWalkerRepositoryImpl implements LineWalkerRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, PplConditionSummaryModel>> getPplConditionSummary() async {
+    try {
+      final res = await remoteDataSource.getPplConditionSummary();
+      return Right(res);
+    } catch (e) {
+      return Left(ServerFailure(message: _extractError(e, 'Gagal memuat ringkasan kondisi PPL')));
+    }
+  }
+
   // --- Ketenagakerjaan ---
   @override
   Future<Either<Failure, List<KetenagakerjaanItemModel>>> getSummaryKetenagakerjaan({int cursor = 0, String? search}) async {
@@ -167,6 +209,28 @@ class LineWalkerRepositoryImpl implements LineWalkerRepository {
       return Right(res);
     } catch (e) {
       return Left(ServerFailure(message: _extractError(e, 'Gagal memuat rincian ketenagakerjaan')));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> downloadSuratKetenagakerjaan({
+    required int id,
+    required int minggu,
+    required String bulan,
+    required int tahun,
+    required String status,
+  }) async {
+    try {
+      final res = await remoteDataSource.downloadSuratKetenagakerjaan(
+        id: id,
+        minggu: minggu,
+        bulan: bulan,
+        tahun: tahun,
+        status: status,
+      );
+      return Right(res);
+    } catch (e) {
+      return Left(ServerFailure(message: _extractError(e, 'Gagal mengunduh surat ketenagakerjaan')));
     }
   }
 
@@ -232,4 +296,55 @@ class LineWalkerRepositoryImpl implements LineWalkerRepository {
       return Left(ServerFailure(message: _extractError(e, 'Gagal memuat rincian riwayat kegiatan sosial')));
     }
   }
+
+  @override
+  Future<Either<Failure, String>> downloadBAPembumian({
+    required int towerId,
+    required int inspectionId,
+    required String towerName,
+  }) async {
+    try {
+      final res = await remoteDataSource.downloadBAPembumian(
+        towerId: towerId,
+        inspectionId: inspectionId,
+        towerName: towerName,
+      );
+      return Right(res);
+    } catch (e) {
+      return Left(ServerFailure(message: _extractError(e, 'Gagal mengunduh Berita Acara Pembumian')));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> downloadBAPPL({
+    required int inspectionId,
+    required String towerName,
+  }) async {
+    try {
+      final res = await remoteDataSource.downloadBAPPL(
+        inspectionId: inspectionId,
+        towerName: towerName,
+      );
+      return Right(res);
+    } catch (e) {
+      return Left(ServerFailure(message: _extractError(e, 'Gagal mengunduh Berita Acara PPL')));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> downloadBAKegiatanSosial({
+    required int inspectionId,
+    required String towerName,
+  }) async {
+    try {
+      final res = await remoteDataSource.downloadBAKegiatanSosial(
+        inspectionId: inspectionId,
+        towerName: towerName,
+      );
+      return Right(res);
+    } catch (e) {
+      return Left(ServerFailure(message: _extractError(e, 'Gagal mengunduh Berita Acara Kegiatan Sosial')));
+    }
+  }
 }
+

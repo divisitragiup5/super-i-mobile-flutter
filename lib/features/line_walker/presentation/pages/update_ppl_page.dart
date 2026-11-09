@@ -1,12 +1,16 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:path_provider/path_provider.dart';
+
+import '../../../../core/constants/role_constants.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import '../../../../core/widgets/field_signature_pad.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
 import '../cubit/ppl_cubit.dart';
+import '../widgets/history_detail_widgets.dart';
 
 class UpdatePPLPage extends StatefulWidget {
   final Map<String, dynamic> item;
@@ -27,7 +31,14 @@ class _UpdatePPLPageState extends State<UpdatePPLPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.item['namaTTDTLGI'] != null) {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      if (authState.user.roles.contains(AppRoles.teamLeaderGi)) {
+        _namaTTDTLGICtrl.text = authState.user.namaLengkap;
+      }
+    }
+
+    if (widget.item['namaTTDTLGI'] != null && widget.item['namaTTDTLGI'].toString().isNotEmpty) {
       _namaTTDTLGICtrl.text = widget.item['namaTTDTLGI'].toString();
     }
   }
@@ -38,21 +49,12 @@ class _UpdatePPLPageState extends State<UpdatePPLPage> {
     super.dispose();
   }
 
-  Future<File> _base64ToFile(String base64Str, String name) async {
-    final cleanBase64 = base64Str.contains(',') ? base64Str.split(',')[1] : base64Str;
-    final bytes = base64Decode(cleanBase64);
-    final tempDir = await getTemporaryDirectory();
-    final file = File('${tempDir.path}/${name}_${DateTime.now().millisecondsSinceEpoch}.png');
-    await file.writeAsBytes(bytes);
-    return file;
-  }
-
   void _handleSubmit() {
     final int id = widget.item['id'] is int
         ? widget.item['id']
         : int.tryParse('${widget.item['id']}') ?? 0;
 
-    if (_ttdTLGI == null && widget.item['ttdTLGI'] == null) {
+    if (_ttdTLGI == null && (widget.item['ttdTLGI'] == null || widget.item['ttdTLGI'].toString().isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Silakan buat tanda tangan Team Leader GI terlebih dahulu')),
       );
@@ -66,178 +68,204 @@ class _UpdatePPLPageState extends State<UpdatePPLPage> {
       return;
     }
 
-    context.read<PplCubit>().updatePpl(
-      id: id,
-      ttdTLGI: _ttdTLGI,
-      namaTTDTLGI: _namaTTDTLGICtrl.text.trim(),
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Konfirmasi'),
+        content: const Text('Apakah anda yakin ingin menyimpan data PPL ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              context.read<PplCubit>().updatePpl(
+                id: id,
+                ttdTLGI: _ttdTLGI,
+                namaTTDTLGI: _namaTTDTLGICtrl.text.trim(),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final towerName = widget.item['tower'] is Map ? widget.item['tower']['nama']?.toString() : 'Tower';
+    final tower = widget.item['tower'];
+    final towerName = (tower is Map ? tower['nama'] : null) ?? widget.item['namaTower'] ?? '-';
     final namaPekerjaan = widget.item['namaPekerjaan']?.toString() ?? '-';
+    final statusPekerjaan = widget.item['statusPekerjaan']?.toString() ?? '-';
+    final kategoriObjek = widget.item['kategoriObjek']?.toString() ?? '-';
     final pihakPelaksana = widget.item['pihakPelaksana']?.toString() ?? '-';
     final pjPekerjaan = widget.item['pjPekerjaan']?.toString() ?? '-';
     final noTelp = widget.item['noTeleponPJPekerjaan']?.toString() ?? '-';
-    final statusPekerjaan = widget.item['statusPekerjaan']?.toString() ?? '-';
-    final existingTtdTLGI = widget.item['ttdTLGI']?.toString();
+    final lokasi = widget.item['lokasi']?.toString() ?? '-';
+
+    final dokObj = widget.item['dokumentasiObjek'];
+    String? dokUri;
+    if (dokObj is Map) {
+      dokUri = dokObj['uri']?.toString();
+    } else if (dokObj != null) {
+      dokUri = dokObj.toString();
+    }
+
+    final hasExistingTtdTLGI = widget.item['ttdTLGI'] != null &&
+        widget.item['ttdTLGI'].toString().isNotEmpty &&
+        widget.item['namaTTDTLGI'] != null &&
+        widget.item['namaTTDTLGI'].toString().isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Update Tanda Tangan PPL'),
+        title: const Text('Lengkapi PPL'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<PplCubit, PplState>(
-        listener: (context, state) {
-          if (state is PplSubmitSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppColors.success),
-            );
-            context.pop(true);
-          } else if (state is PplSubmitFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppColors.danger),
-            );
-          }
-        },
-        builder: (context, state) {
-          final isSubmitting = state is PplSubmitting;
+      body: AppBackground(
+        child: BlocConsumer<PplCubit, PplState>(
+          listener: (context, state) {
+            if (state is PplSubmitSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message), backgroundColor: AppColors.success),
+              );
+              context.pop(true);
+            } else if (state is PplSubmitFailure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message), backgroundColor: AppColors.danger),
+              );
+            }
+          },
+          builder: (context, state) {
+            final isSubmitting = state is PplSubmitting;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Info Card
-                Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'INFORMASI PPL',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  HistoryInputContainer(
+                    label: 'INFORMASI PPL',
+                    children: [
+                      HistoryInputWithLabel(
+                        label: 'Objek',
+                        isFirst: true,
+                        child: Text(towerName, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+                      ),
+                      HistoryInputWithLabel(
+                        label: 'Nama Pekerjaan',
+                        child: Text(namaPekerjaan, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+                      ),
+                      HistoryInputWithLabel(
+                        label: 'Status Pekerjaan',
+                        child: Text(statusPekerjaan, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+                      ),
+                      HistoryInputWithLabel(
+                        label: 'Kategori Objek',
+                        child: Text(kategoriObjek, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+                      ),
+                      HistoryInputWithLabel(
+                        label: 'Pihak Pelaksana',
+                        child: Text(pihakPelaksana, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+                      ),
+                      HistoryInputWithLabel(
+                        label: 'Penanggung Jawab Pekerjaan',
+                        child: Text(pjPekerjaan, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+                      ),
+                      HistoryInputWithLabel(
+                        label: 'No Telepon Penanggung Jawab Pekerjaan',
+                        child: Text(noTelp, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+                      ),
+                      HistoryInputWithLabel(
+                        label: 'Lokasi',
+                        child: Text(lokasi, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+                      ),
+                      HistoryInputWithLabel(
+                        label: 'Tanggal',
+                        child: Text(
+                          formatHistoryDate(widget.item['createdAt'], 'dd/MM/yyyy'),
+                          style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
                         ),
-                        const SizedBox(height: 12),
-                        Text('Objek: $towerName', style: const TextStyle(fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 6),
-                        Text('Nama Pekerjaan: $namaPekerjaan'),
-                        const SizedBox(height: 6),
-                        Text('Status Pekerjaan: $statusPekerjaan'),
-                        const SizedBox(height: 6),
-                        Text('Pelaksana: $pihakPelaksana'),
-                        const SizedBox(height: 6),
-                        Text('Penanggung Jawab: $pjPekerjaan ($noTelp)'),
-                      ],
-                    ),
+                      ),
+                      if (dokUri != null && dokUri.isNotEmpty)
+                        HistoryInputWithLabel(
+                          label: 'Dokumentasi Objek',
+                          child: HistoryImageDisplay(url: dokUri),
+                        ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 16),
 
-                // Signature Card
-                Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'TANDA TANGAN TEAM LEADER GI',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
+                  HistoryInputContainer(
+                    label: 'TANDA TANGAN',
+                    children: [
+                      HistoryInputWithLabel(
+                        label: 'Line Walker',
+                        isFirst: true,
+                        child: HistorySignatureDisplay(
+                          url: widget.item['ttdLineWalker']?.toString(),
+                          label: widget.item['namaTTDLineWalker']?.toString(),
                         ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _namaTTDTLGICtrl,
-                          decoration: InputDecoration(
-                            labelText: 'Nama Lengkap Team Leader GI *',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
+                      ),
+                      HistoryInputWithLabel(
+                        label: 'Penanggung Jawab Pekerjaan',
+                        child: HistorySignatureDisplay(
+                          url: widget.item['ttdPJPekerjaan']?.toString(),
+                          label: widget.item['namaTTDPJPekerjaan']?.toString(),
                         ),
-                        const SizedBox(height: 12),
-                        if (_ttdTLGI != null) ...[
-                          Container(
-                            height: 120,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(8),
+                      ),
+                      HistoryInputWithLabel(
+                        label: 'Team Leader GI',
+                        child: hasExistingTtdTLGI
+                            ? HistorySignatureDisplay(
+                                url: widget.item['ttdTLGI']?.toString(),
+                                label: widget.item['namaTTDTLGI']?.toString(),
+                              )
+                            : FieldSignatureInput(
+                                label: 'TTD Team Leader GI',
+                                isRequired: true,
+                                signatureFile: _ttdTLGI,
+                                signatureUrl: widget.item['ttdTLGI']?.toString(),
+                                signerName: _namaTTDTLGICtrl.text,
+                                onSignatureChanged: (file) => setState(() => _ttdTLGI = file),
+                                onNameChanged: (name) => setState(() => _namaTTDTLGICtrl.text = name),
+                              ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  if (!hasExistingTtdTLGI)
+                    ElevatedButton(
+                      onPressed: isSubmitting ? null : _handleSubmit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Text(
+                              'Simpan',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
-                            child: Image.file(_ttdTLGI!, fit: BoxFit.contain),
-                          ),
-                          const SizedBox(height: 8),
-                        ] else if (existingTtdTLGI != null && existingTtdTLGI.isNotEmpty) ...[
-                          Container(
-                            height: 120,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Image.network(existingTtdTLGI, fit: BoxFit.contain),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            final base64 = await FieldSignaturePad.show(
-                              context,
-                              title: 'Tanda Tangan Team Leader GI',
-                              signerName: _namaTTDTLGICtrl.text,
-                            );
-                            if (base64 != null) {
-                              final f = await _base64ToFile(base64, 'ttdTLGI');
-                              setState(() => _ttdTLGI = f);
-                            }
-                          },
-                          icon: const Icon(Icons.draw_outlined),
-                          label: Text(_ttdTLGI != null || existingTtdTLGI != null
-                              ? 'Ubah Tanda Tangan'
-                              : 'Buka Kanvas Tanda Tangan'),
-                        ),
-                      ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                ElevatedButton(
-                  onPressed: isSubmitting ? null : _handleSubmit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Text(
-                          'Simpan Pembaruan',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

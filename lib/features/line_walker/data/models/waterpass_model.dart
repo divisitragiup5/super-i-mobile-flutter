@@ -72,6 +72,7 @@ class WaterpassDetailModel {
   final String? fotoXUrl;
   final String? fotoYUrl;
   final String? fotoZUrl;
+  final Map<String, dynamic> rawJson;
 
   WaterpassDetailModel({
     required this.id,
@@ -85,21 +86,33 @@ class WaterpassDetailModel {
     this.fotoXUrl,
     this.fotoYUrl,
     this.fotoZUrl,
+    this.rawJson = const {},
   });
 
   factory WaterpassDetailModel.fromJson(Map<String, dynamic> json) {
+    double? parseDouble(dynamic val) {
+      if (val is num) return val.toDouble();
+      if (val != null) return double.tryParse(val.toString());
+      return null;
+    }
+
+    final rawX = json['waterpassX'] is Map ? json['waterpassX']['hasil'] : json['hasilX'];
+    final rawY = json['waterpassY'] is Map ? json['waterpassY']['hasil'] : json['hasilY'];
+    final rawZ = json['waterpassZ'] is Map ? json['waterpassZ']['hasil'] : json['hasilZ'];
+
     return WaterpassDetailModel(
-      id: json['id'] is int ? json['id'] : int.tryParse('${json['id']}') ?? 0,
-      namaTower: json['tower'] is Map ? json['tower']['nama']?.toString() : null,
+      id: json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}') ?? 0,
+      namaTower: json['tower'] is Map ? json['tower']['nama']?.toString() : json['namaTower']?.toString(),
       createdAt: json['createdAt']?.toString(),
-      hasilX: (json['waterpassX'] is Map ? json['waterpassX']['hasil'] : json['hasilX']) as double?,
-      hasilY: (json['waterpassY'] is Map ? json['waterpassY']['hasil'] : json['hasilY']) as double?,
-      hasilZ: (json['waterpassZ'] is Map ? json['waterpassZ']['hasil'] : json['hasilZ']) as double?,
+      hasilX: parseDouble(rawX),
+      hasilY: parseDouble(rawY),
+      hasilZ: parseDouble(rawZ),
       fotoSebelumUrl: json['fotoTowerSebelumInspeksi'] is Map ? json['fotoTowerSebelumInspeksi']['uri']?.toString() : null,
       fotoSetelahUrl: json['fotoTowerSetelahInspeksi'] is Map ? json['fotoTowerSetelahInspeksi']['uri']?.toString() : null,
       fotoXUrl: json['waterpassX'] is Map && json['waterpassX']['pict'] is Map ? json['waterpassX']['pict']['uri']?.toString() : null,
       fotoYUrl: json['waterpassY'] is Map && json['waterpassY']['pict'] is Map ? json['waterpassY']['pict']['uri']?.toString() : null,
       fotoZUrl: json['waterpassZ'] is Map && json['waterpassZ']['pict'] is Map ? json['waterpassZ']['pict']['uri']?.toString() : null,
+      rawJson: json,
     );
   }
 }

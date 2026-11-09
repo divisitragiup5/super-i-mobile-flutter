@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-
-import '../../../../core/theme/app_colors.dart';
-import '../models/menu_item_model.dart';
-
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/theme/app_colors.dart';
+import '../cubit/drafts_cubit.dart';
+import '../models/menu_item_model.dart';
 
 class MenuCard extends StatelessWidget {
   final MenuItemModel item;
@@ -20,14 +20,19 @@ class MenuCard extends StatelessWidget {
       shadowColor: Colors.black.withValues(alpha: 0.08),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () {
+        onTap: () async {
           if (item.params != null && item.params!.isNotEmpty) {
-            context.push(
+            await context.push(
               item.route,
               extra: item.params,
             );
           } else {
-            context.push(item.route);
+            await context.push(item.route);
+          }
+          if (context.mounted) {
+            try {
+              context.read<DraftsCubit>().loadDrafts();
+            } catch (_) {}
           }
         },
         child: Padding(

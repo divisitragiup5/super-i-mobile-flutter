@@ -326,12 +326,25 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.ppl,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
+          final extra = state.extra;
+          Map<String, dynamic>? initialData;
+          int? draftId;
+          if (extra is Map<String, dynamic>) {
+            if (extra.containsKey('draft')) {
+              initialData = extra['draft'] as Map<String, dynamic>?;
+              draftId = extra['draftId'] as int?;
+            } else if (extra.containsKey('item')) {
+              initialData = extra['item'] as Map<String, dynamic>?;
+              draftId = extra['draftId'] as int?;
+            } else if (extra.containsKey('towerId') || extra.containsKey('namaPekerjaan') || extra.containsKey('id')) {
+              initialData = extra;
+            }
+          }
           return BlocProvider<PplCubit>(
             create: (_) => sl<PplCubit>(),
             child: PplFormPage(
-              initialDraft: extra?['draft'] as Map<String, dynamic>?,
-              draftId: extra?['draftId'] as int?,
+              initialDraft: initialData,
+              draftId: draftId,
             ),
           );
         },
@@ -394,9 +407,15 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.ketenagakerjaan,
         builder: (context, state) {
+          final authState = sl<AuthBloc>().state;
+          final currentUserId = authState is AuthAuthenticated ? authState.user.id : 0;
+          final currentNama = authState is AuthAuthenticated ? authState.user.namaLengkap : null;
+
           final idParam = state.uri.queryParameters['id'];
-          final id = idParam != null ? int.tryParse(idParam) ?? 0 : 0;
-          final nama = state.uri.queryParameters['namaLengkap'];
+          final parsedId = idParam != null ? int.tryParse(idParam) : null;
+          final id = (parsedId != null && parsedId > 0) ? parsedId : currentUserId;
+          final nama = state.uri.queryParameters['namaLengkap'] ?? currentNama;
+
           return BlocProvider<KetenagakerjaanCubit>(
             create: (_) => sl<KetenagakerjaanCubit>(),
             child: KetenagakerjaanPage(id: id, namaLengkap: nama),
@@ -415,12 +434,25 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.kegiatanSosial,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
+          final extra = state.extra;
+          Map<String, dynamic>? initialData;
+          int? draftId;
+          if (extra is Map<String, dynamic>) {
+            if (extra.containsKey('draft')) {
+              initialData = extra['draft'] as Map<String, dynamic>?;
+              draftId = extra['draftId'] as int?;
+            } else if (extra.containsKey('item')) {
+              initialData = extra['item'] as Map<String, dynamic>?;
+              draftId = extra['draftId'] as int?;
+            } else if (extra.containsKey('towerId') || extra.containsKey('jenisAktivitas') || extra.containsKey('id')) {
+              initialData = extra;
+            }
+          }
           return BlocProvider<KegiatanSosialCubit>(
             create: (_) => sl<KegiatanSosialCubit>(),
             child: KegiatanSosialFormPage(
-              initialDraft: extra?['draft'] as Map<String, dynamic>?,
-              draftId: extra?['draftId'] as int?,
+              initialDraft: initialData,
+              draftId: draftId,
             ),
           );
         },

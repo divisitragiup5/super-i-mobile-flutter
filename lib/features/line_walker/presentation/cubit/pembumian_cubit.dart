@@ -186,4 +186,16 @@ class PembumianCubit extends Cubit<PembumianState> {
       );
     }
   }
+
+  Future<String> downloadBA(PembumianHistoryItemModel item) async {
+    final result = await repository.downloadBAPembumian(
+      towerId: item.towerId,
+      inspectionId: item.id,
+      towerName: item.namaTower ?? 'Tower-${item.towerId}',
+    );
+    return result.fold(
+      (failure) => throw Exception(failure.message),
+      (path) => path,
+    );
+  }
 }

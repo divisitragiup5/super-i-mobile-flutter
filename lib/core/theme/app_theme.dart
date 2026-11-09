@@ -24,7 +24,7 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       primaryColor: AppColors.primary,
-      scaffoldBackgroundColor: AppColors.backgroundLight,
+      scaffoldBackgroundColor: Colors.transparent,
 
       // Color Scheme Material 3
       colorScheme: const ColorScheme.light(

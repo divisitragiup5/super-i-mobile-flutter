@@ -15,8 +15,11 @@ import '../../features/auth/presentation/bloc/auth_event.dart';
 import '../../features/home/data/datasources/home_summary_remote_data_source.dart';
 import '../../features/home/data/repositories/home_summary_repository_impl.dart';
 import '../../features/home/domain/repositories/home_summary_repository.dart';
+import '../../features/home/presentation/cubit/drafts_cubit.dart';
+import '../../features/home/presentation/cubit/line_walker_performance_cubit.dart';
 import '../../features/home/presentation/cubit/sutm_inspeksi_score_cubit.dart';
 import '../../features/home/presentation/cubit/sutm_pemeliharaan_score_cubit.dart';
+import '../../features/home/presentation/cubit/ppl_condition_summary_cubit.dart';
 import '../network/dio_client.dart';
 import '../network/network_info.dart';
 import '../storage/local_database.dart';
@@ -157,6 +160,7 @@ Future<void> initDependencies() async {
       loginUseCase: sl<LoginUseCase>(),
       getCurrentUserUseCase: sl<GetCurrentUserUseCase>(),
       logoutUseCase: sl<LogoutUseCase>(),
+      lineWalkerRepository: sl<LineWalkerRepository>(),
     ),
   );
 
@@ -181,6 +185,16 @@ Future<void> initDependencies() async {
 
   sl.registerFactory<SutmPemeliharaanScoreCubit>(
     () => SutmPemeliharaanScoreCubit(repository: sl<HomeSummaryRepository>()),
+  );
+
+  sl.registerLazySingleton<DraftsCubit>(() => DraftsCubit());
+
+  sl.registerFactory<LineWalkerPerformanceCubit>(
+    () => LineWalkerPerformanceCubit(sl<LineWalkerRepository>()),
+  );
+
+  sl.registerFactory<PplConditionSummaryCubit>(
+    () => PplConditionSummaryCubit(sl<LineWalkerRepository>()),
   );
 
   sl.registerLazySingleton<PermissionService>(() => PermissionService());

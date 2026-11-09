@@ -12,6 +12,8 @@ class CircularGauge extends StatelessWidget {
   final Color color;
   final String? centerLabel;
   final bool showPercent;
+  final Color textColor;
+  final VoidCallback? onTap;
 
   const CircularGauge({
     super.key,
@@ -24,13 +26,15 @@ class CircularGauge extends StatelessWidget {
     String? centerLabel,
     String? label,
     this.showPercent = false,
+    this.textColor = AppColors.textPrimary,
+    this.onTap,
   })  : progress = progress ?? score ?? 0.0,
         radius = radius ?? (size != null ? size / 2 : 65),
         centerLabel = centerLabel ?? label;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    Widget content = SizedBox(
       width: radius * 2,
       height: radius * 2,
       child: CustomPaint(
@@ -50,7 +54,7 @@ class CircularGauge extends StatelessWidget {
                 style: TextStyle(
                   fontSize: radius * 0.32,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: textColor,
                 ),
               ),
               if (centerLabel != null)
@@ -58,7 +62,7 @@ class CircularGauge extends StatelessWidget {
                   centerLabel!,
                   style: TextStyle(
                     fontSize: radius * 0.18,
-                    color: AppColors.textSecondary,
+                    color: textColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -67,6 +71,15 @@ class CircularGauge extends StatelessWidget {
         ),
       ),
     );
+
+    if (onTap != null) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: content,
+      );
+    }
+    return content;
   }
 }
 

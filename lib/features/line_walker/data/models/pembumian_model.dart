@@ -110,26 +110,44 @@ class PembumianInputModel {
 
 class PembumianHistoryItemModel {
   final int id;
+  final int towerId;
   final String? namaTower;
   final String? createdAt;
   final String? kendala;
   final double? nilaiRataRata;
+  final String ukurPembumianStatus;
+  final String kondisiPembumianStatus;
+  final Map<String, dynamic> rawJson;
 
   PembumianHistoryItemModel({
     required this.id,
+    required this.towerId,
     this.namaTower,
     this.createdAt,
     this.kendala,
     this.nilaiRataRata,
+    this.ukurPembumianStatus = 'normal',
+    this.kondisiPembumianStatus = 'normal',
+    this.rawJson = const {},
   });
 
   factory PembumianHistoryItemModel.fromJson(Map<String, dynamic> json) {
+    final towerMap = json['tower'] is Map ? json['tower'] as Map<String, dynamic> : null;
+    final tId = towerMap != null && towerMap['id'] != null
+        ? (towerMap['id'] is int ? towerMap['id'] as int : int.tryParse('${towerMap['id']}') ?? 0)
+        : (json['towerId'] is int ? json['towerId'] as int : int.tryParse('${json['towerId']}') ?? 0);
+
     return PembumianHistoryItemModel(
-      id: json['id'] is int ? json['id'] : int.tryParse('${json['id']}') ?? 0,
-      namaTower: json['tower'] is Map ? json['tower']['nama']?.toString() : null,
+      id: json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}') ?? 0,
+      towerId: tId,
+      namaTower: towerMap != null ? towerMap['nama']?.toString() : json['namaTower']?.toString(),
       createdAt: json['createdAt']?.toString(),
       kendala: json['kendala']?.toString(),
       nilaiRataRata: (json['nilaiRataRata'] as num?)?.toDouble(),
+      ukurPembumianStatus: json['ukurPembumianStatus']?.toString() ?? 'normal',
+      kondisiPembumianStatus: json['kondisiPembumianStatus']?.toString() ?? 'normal',
+      rawJson: json,
     );
   }
 }
+
