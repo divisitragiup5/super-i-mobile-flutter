@@ -278,6 +278,11 @@ class OpgiRepositoryImpl implements OpgiRepository {
   }
 
   @override
+  Future<List<AnomaliKondisiModel>> getKondisiAnomaliHistory(int anomaliId, {int? cursor}) {
+    return _remoteDataSource.getKondisiAnomaliHistory(anomaliId, cursor: cursor);
+  }
+
+  @override
   Future<List<Map<String, dynamic>>> getAnomaliAssets(int garduIndukId, String jenisAsset) {
     return _remoteDataSource.getAnomaliAssets(garduIndukId, jenisAsset);
   }
@@ -306,6 +311,11 @@ class OpgiRepositoryImpl implements OpgiRepository {
       imageFile: imageFile,
       videoFile: videoFile,
     );
+  }
+
+  @override
+  Future<void> updateAnomaliKondisi(int kondisiId, Map<String, dynamic> data) {
+    return _remoteDataSource.updateAnomaliKondisi(kondisiId, data);
   }
 
   @override

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,6 +12,7 @@ abstract class OpgiAnomaliState extends Equatable {
 }
 
 class OpgiAnomaliInitial extends OpgiAnomaliState {}
+
 class OpgiAnomaliLoading extends OpgiAnomaliState {}
 
 class OpgiAnomaliLoaded extends OpgiAnomaliState {
@@ -21,6 +21,17 @@ class OpgiAnomaliLoaded extends OpgiAnomaliState {
   const OpgiAnomaliLoaded({required this.items, this.localDrafts = const []});
   @override
   List<Object?> get props => [items, localDrafts];
+}
+
+class OpgiAnomaliKondisiLoaded extends OpgiAnomaliState {
+  final List<AnomaliKondisiModel> conditions;
+  final List<Map<String, dynamic>> localDrafts;
+  const OpgiAnomaliKondisiLoaded({
+    required this.conditions,
+    this.localDrafts = const [],
+  });
+  @override
+  List<Object?> get props => [conditions, localDrafts];
 }
 
 class OpgiAnomaliAssetsLoaded extends OpgiAnomaliState {
@@ -32,9 +43,10 @@ class OpgiAnomaliAssetsLoaded extends OpgiAnomaliState {
 
 class OpgiAnomaliSuccess extends OpgiAnomaliState {
   final String message;
-  const OpgiAnomaliSuccess(this.message);
+  final dynamic extra;
+  const OpgiAnomaliSuccess(this.message, {this.extra});
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, extra];
 }
 
 class OpgiAnomaliError extends OpgiAnomaliState {
@@ -52,9 +64,35 @@ class OpgiAnomaliCubit extends Cubit<OpgiAnomaliState> {
   Future<void> loadHistory(int garduIndukId, {int? cursor}) async {
     emit(OpgiAnomaliLoading());
     try {
-      final items = await _repository.getAnomaliHistory(garduIndukId, cursor: cursor);
-      final drafts = await LocalDatabase.instance.getUnfinishedItemsGI(type: 'anomali');
+      final items =
+          await _repository.getAnomaliHistory(garduIndukId, cursor: cursor);
+      List<Map<String, dynamic>> drafts = [];
+      try {
+        drafts =
+            await LocalDatabase.instance.getUnfinishItemGi(type: 'anomali');
+      } catch (_) {}
       emit(OpgiAnomaliLoaded(items: items, localDrafts: drafts));
+    } catch (e) {
+      emit(OpgiAnomaliError(e.toString()));
+    }
+  }
+
+  Future<void> loadKondisiHistory(int anomaliId,
+      {int? cursor, String? draftKey}) async {
+    emit(OpgiAnomaliLoading());
+    try {
+      final items = await _repository.getKondisiAnomaliHistory(anomaliId,
+          cursor: cursor);
+      List<Map<String, dynamic>> drafts = [];
+      if (draftKey != null && draftKey.isNotEmpty) {
+        try {
+          drafts = await LocalDatabase.instance.getUnfinishItemGi(
+            nama: draftKey,
+            type: 'anomali-progress',
+          );
+        } catch (_) {}
+      }
+      emit(OpgiAnomaliKondisiLoaded(conditions: items, localDrafts: drafts));
     } catch (e) {
       emit(OpgiAnomaliError(e.toString()));
     }
@@ -62,7 +100,8 @@ class OpgiAnomaliCubit extends Cubit<OpgiAnomaliState> {
 
   Future<void> loadAssets(int garduIndukId, String jenisAsset) async {
     try {
-      final assets = await _repository.getAnomaliAssets(garduIndukId, jenisAsset);
+      final assets =
+          await _repository.getAnomaliAssets(garduIndukId, jenisAsset);
       emit(OpgiAnomaliAssetsLoaded(assets));
     } catch (e) {
       emit(OpgiAnomaliError(e.toString()));
@@ -83,7 +122,7 @@ class OpgiAnomaliCubit extends Cubit<OpgiAnomaliState> {
         videoFile: videoFile,
       );
       if (draftId != null) {
-        await LocalDatabase.instance.deleteUnfinishedItemGI(draftId);
+        await LocalDatabase.instance.removeFinishedItemGi(draftId);
       }
       emit(const OpgiAnomaliSuccess('Laporan anomali berhasil dikirim'));
     } catch (e) {
@@ -95,6 +134,7 @@ class OpgiAnomaliCubit extends Cubit<OpgiAnomaliState> {
     required Map<String, dynamic> data,
     XFile? imageFile,
     XFile? videoFile,
+    int? draftId,
   }) async {
     emit(OpgiAnomaliLoading());
     try {
@@ -103,7 +143,31 @@ class OpgiAnomaliCubit extends Cubit<OpgiAnomaliState> {
         imageFile: imageFile,
         videoFile: videoFile,
       );
-      emit(const OpgiAnomaliSuccess('Update kondisi anomali berhasil dikirim'));
+      if (draftId != null) {
+        await LocalDatabase.instance.removeFinishedItemGi(draftId);
+      }
+      final isSelesai = data['tindakan']?.toString().toUpperCase() == 'SELESAI';
+      emit(OpgiAnomaliSuccess(
+        'Update kondisi anomali berhasil dikirim',
+        extra: {'isSelesai': isSelesai},
+      ));
+    } catch (e) {
+      emit(OpgiAnomaliError(e.toString()));
+    }
+  }
+
+  Future<void> updateAnomaliKondisi({
+    required int kondisiId,
+    required Map<String, dynamic> data,
+  }) async {
+    emit(OpgiAnomaliLoading());
+    try {
+      await _repository.updateAnomaliKondisi(kondisiId, data);
+      final isSelesai = data['tindakan']?.toString().toUpperCase() == 'SELESAI';
+      emit(OpgiAnomaliSuccess(
+        'Kondisi anomali berhasil diperbarui',
+        extra: {'isSelesai': isSelesai},
+      ));
     } catch (e) {
       emit(OpgiAnomaliError(e.toString()));
     }
@@ -114,40 +178,85 @@ class OpgiAnomaliCubit extends Cubit<OpgiAnomaliState> {
     try {
       await _repository.deleteAnomali(id);
       final items = await _repository.getAnomaliHistory(garduIndukId);
-      final drafts = await LocalDatabase.instance.getUnfinishedItemsGI(type: 'anomali');
+      List<Map<String, dynamic>> drafts = [];
+      try {
+        drafts =
+            await LocalDatabase.instance.getUnfinishItemGi(type: 'anomali');
+      } catch (_) {}
       emit(OpgiAnomaliLoaded(items: items, localDrafts: drafts));
     } catch (e) {
       emit(OpgiAnomaliError(e.toString()));
     }
   }
 
-  Future<void> deleteAnomaliKondisi(int id, int garduIndukId) async {
+  Future<void> deleteAnomaliKondisi(
+      int id, int anomaliId, {String? draftKey}) async {
     emit(OpgiAnomaliLoading());
     try {
       await _repository.deleteAnomaliKondisi(id);
-      final items = await _repository.getAnomaliHistory(garduIndukId);
-      final drafts = await LocalDatabase.instance.getUnfinishedItemsGI(type: 'anomali');
-      emit(OpgiAnomaliLoaded(items: items, localDrafts: drafts));
+      final items = await _repository.getKondisiAnomaliHistory(anomaliId);
+      List<Map<String, dynamic>> drafts = [];
+      if (draftKey != null && draftKey.isNotEmpty) {
+        try {
+          drafts = await LocalDatabase.instance.getUnfinishItemGi(
+            nama: draftKey,
+            type: 'anomali-progress',
+          );
+        } catch (_) {}
+      }
+      emit(OpgiAnomaliKondisiLoaded(conditions: items, localDrafts: drafts));
     } catch (e) {
       emit(OpgiAnomaliError(e.toString()));
     }
   }
 
-  Future<void> saveDraft({
+  // ═══════════════════════════════════════════════════════════════
+  // Draft Management
+  // ═══════════════════════════════════════════════════════════════
+
+  Future<void> saveAnomaliDraft({
     required String nama,
-    required String date,
     required Map<String, dynamic> data,
   }) async {
-    await LocalDatabase.instance.insertUnfinishedItemGI({
-      'nama': nama,
-      'date': date,
-      'type': 'anomali',
-      'periode': 0,
-      'data': jsonEncode(data),
-    });
+    await LocalDatabase.instance.addUnfinishItemGi(
+      nama: nama,
+      date: DateTime.now().toIso8601String(),
+      type: 'anomali',
+      periode: 0,
+      data: data,
+    );
+  }
+
+  Future<void> saveKondisiDraft({
+    required String nama,
+    required Map<String, dynamic> data,
+  }) async {
+    await LocalDatabase.instance.addUnfinishItemGi(
+      nama: nama,
+      date: DateTime.now().toIso8601String(),
+      type: 'anomali-progress',
+      periode: 0,
+      data: data,
+    );
+  }
+
+  Future<Map<String, dynamic>?> getAnomaliDraft(String nama) async {
+    final drafts = await LocalDatabase.instance.getUnfinishItemGi(
+      nama: nama,
+      type: 'anomali',
+    );
+    return drafts.isNotEmpty ? drafts.first : null;
+  }
+
+  Future<Map<String, dynamic>?> getKondisiDraft(String nama) async {
+    final drafts = await LocalDatabase.instance.getUnfinishItemGi(
+      nama: nama,
+      type: 'anomali-progress',
+    );
+    return drafts.isNotEmpty ? drafts.first : null;
   }
 
   Future<void> deleteDraft(int draftId) async {
-    await LocalDatabase.instance.deleteUnfinishedItemGI(draftId);
+    await LocalDatabase.instance.removeFinishedItemGi(draftId);
   }
 }

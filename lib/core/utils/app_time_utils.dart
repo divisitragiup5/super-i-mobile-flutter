@@ -43,4 +43,24 @@ class AppTimeUtils {
       }
     }
   }
+
+  /// Format objek DateTime (baik UTC maupun lokal) ke representasi string dalam zona waktu lokal perangkat user.
+  static String formatDateTime(
+    DateTime? dt, {
+    String pattern = 'EEEE, d MMMM yyyy HH:mm',
+    String? locale = 'id_ID',
+    String fallback = '-',
+  }) {
+    if (dt == null) return fallback;
+    final localDt = dt.toLocal();
+    try {
+      return DateFormat(pattern, locale).format(localDt);
+    } catch (_) {
+      try {
+        return DateFormat(pattern).format(localDt);
+      } catch (_) {
+        return localDt.toString();
+      }
+    }
+  }
 }

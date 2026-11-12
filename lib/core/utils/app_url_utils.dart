@@ -48,4 +48,10 @@ class AppUrlUtils {
 
   /// Alias untuk memastikan URL gambar valid dan memiliki skema lengkap
   static String ensureHttps(String? url) => getFullImageUrl(url);
+
+  /// Resolves any relative or absolute media path to a full URL (returns null if empty)
+  static String? resolveMediaUrl(String? url) {
+    if (url == null || url.trim().isEmpty) return null;
+    return getFullImageUrl(url);
+  }
 }

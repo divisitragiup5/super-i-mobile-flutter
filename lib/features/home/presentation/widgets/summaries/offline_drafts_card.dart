@@ -87,9 +87,21 @@ class OfflineDraftsCard extends StatelessWidget {
       context
           .push(AppRoutes.inputIl1TrafoPs, extra: parsedData)
           .then((_) => draftsCubit.loadDrafts());
-    } else if (type == 'anomali-gi') {
+    } else if (type == 'anomali-gi' || type == 'anomali') {
       context
-          .push(AppRoutes.inputAnomaliGi, extra: parsedData)
+          .push(AppRoutes.inputAnomaliGi, extra: {
+            'garduIndukNama': draft['nama'] ?? '-',
+            'garduIndukId': parsedData?['garduIndukId'] ?? 0,
+            'initialDraftData': parsedData,
+          })
+          .then((_) => draftsCubit.loadDrafts());
+    } else if (type == 'anomali-progress') {
+      context
+          .push(AppRoutes.inputKondisiAnomaliGi, extra: {
+            'anomaliId': parsedData?['anomaliId'] ?? 0,
+            'assetNama': draft['nama'] ?? '-',
+            'initialDraftData': parsedData,
+          })
           .then((_) => draftsCubit.loadDrafts());
     }
   }

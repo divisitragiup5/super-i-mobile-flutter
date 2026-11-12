@@ -111,9 +111,12 @@ import '../../features/opgi/presentation/pages/data_manuver_page.dart';
 import '../../features/opgi/presentation/pages/input_manuver_page.dart';
 import '../../features/opgi/presentation/pages/input_manuver_progress_page.dart';
 import '../../features/opgi/presentation/pages/update_manuver_progress_page.dart';
+import '../../features/opgi/data/models/opgi_anomali_model.dart';
 import '../../features/opgi/presentation/pages/anomali_gi_page.dart';
+import '../../features/opgi/presentation/pages/data_anomali_gi_page.dart';
 import '../../features/opgi/presentation/pages/input_anomali_gi_page.dart';
 import '../../features/opgi/presentation/pages/input_kondisi_anomali_gi_page.dart';
+import '../../features/opgi/presentation/pages/update_kondisi_anomali_gi_page.dart';
 import '../../features/opgi/presentation/pages/il1_hub_page.dart';
 import '../../features/opgi/presentation/pages/il1_kubikel_page.dart';
 import '../../features/opgi/presentation/pages/data_il1_kubikel_page.dart';
@@ -1058,6 +1061,41 @@ class AppRouter {
         },
       ),
       GoRoute(
+        path: AppRoutes.dataAnomaliGi,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          AnomaliReportModel? model;
+          if (extra['data'] is AnomaliReportModel) {
+            model = extra['data'] as AnomaliReportModel;
+          } else if (extra['data'] is Map<String, dynamic>) {
+            model = AnomaliReportModel.fromJson(
+                extra['data'] as Map<String, dynamic>);
+          }
+          final defaultModel = model ??
+              AnomaliReportModel(
+                id: _safeInt(extra['id']),
+                jenisAsset: 'PENYULANG',
+                assetId: 0,
+                assetNama: extra['nama']?.toString() ?? '-',
+                entitas: 'KUBIKEL',
+                urgensi: 'AMAN',
+                tindakan: extra['progress']?.toString() ?? 'TIDAK ADA',
+                keterangan: '',
+              );
+          return BlocProvider<OpgiAnomaliCubit>(
+            create: (_) => sl<OpgiAnomaliCubit>(),
+            child: DataAnomaliGiPage(
+              anomaliId: _safeInt(extra['id']),
+              garduIndukNama: extra['garduInduk']?.toString() ?? '-',
+              garduIndukId: _safeInt(extra['garduIndukId']),
+              anomaliData: defaultModel,
+              initialProgress: extra['progress']?.toString() ??
+                  defaultModel.latestTindakan,
+            ),
+          );
+        },
+      ),
+      GoRoute(
         path: AppRoutes.inputAnomaliGi,
         builder: (context, state) {
           final extra = _extractExtra(state);
@@ -1066,6 +1104,8 @@ class AppRouter {
             child: InputAnomaliGiPage(
               garduIndukId: _safeInt(extra['garduIndukId']),
               garduIndukNama: extra['garduIndukNama']?.toString() ?? '-',
+              initialDraftData:
+                  extra['initialDraftData'] as Map<String, dynamic>?,
             ),
           );
         },
@@ -1074,11 +1114,79 @@ class AppRouter {
         path: AppRoutes.inputKondisiAnomaliGi,
         builder: (context, state) {
           final extra = _extractExtra(state);
+          AnomaliReportModel? model;
+          if (extra['data'] is AnomaliReportModel) {
+            model = extra['data'] as AnomaliReportModel;
+          } else if (extra['data'] is Map<String, dynamic>) {
+            model = AnomaliReportModel.fromJson(
+                extra['data'] as Map<String, dynamic>);
+          }
           return BlocProvider<OpgiAnomaliCubit>(
             create: (_) => sl<OpgiAnomaliCubit>(),
             child: InputKondisiAnomaliGiPage(
               anomaliId: _safeInt(extra['anomaliId']),
-              assetNama: extra['assetNama']?.toString() ?? '-',
+              garduIndukNama: extra['garduInduk']?.toString() ??
+                  model?.namaGarduInduk ??
+                  '-',
+              garduIndukId: _safeInt(extra['garduIndukId']),
+              anomaliData: model,
+              assetNama:
+                  extra['assetNama']?.toString() ?? model?.assetNama ?? '-',
+              initialDraftData:
+                  extra['initialDraftData'] as Map<String, dynamic>?,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.updateKondisiAnomaliGi,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          AnomaliReportModel? model;
+          if (extra['anomali'] is AnomaliReportModel) {
+            model = extra['anomali'] as AnomaliReportModel;
+          } else if (extra['anomali'] is Map<String, dynamic>) {
+            model = AnomaliReportModel.fromJson(
+                extra['anomali'] as Map<String, dynamic>);
+          }
+
+          AnomaliKondisiModel? kondisi;
+          if (extra['kondisi'] is AnomaliKondisiModel) {
+            kondisi = extra['kondisi'] as AnomaliKondisiModel;
+          } else if (extra['kondisi'] is Map<String, dynamic>) {
+            kondisi = AnomaliKondisiModel.fromJson(
+                extra['kondisi'] as Map<String, dynamic>);
+          }
+
+          final defaultAnomali = model ??
+              const AnomaliReportModel(
+                id: 0,
+                jenisAsset: 'PENYULANG',
+                assetId: 0,
+                assetNama: '-',
+                entitas: 'KUBIKEL',
+                urgensi: 'AMAN',
+                tindakan: 'TIDAK ADA',
+                keterangan: '',
+              );
+
+          final defaultKondisi = kondisi ??
+              const AnomaliKondisiModel(
+                id: 0,
+                anomaliId: 0,
+                urgensi: 'AMAN',
+                tindakan: 'TIDAK ADA',
+                keterangan: '',
+              );
+
+          return BlocProvider<OpgiAnomaliCubit>(
+            create: (_) => sl<OpgiAnomaliCubit>(),
+            child: UpdateKondisiAnomaliGiPage(
+              anomaliData: defaultAnomali,
+              kondisiItem: defaultKondisi,
+              garduIndukNama: extra['garduInduk']?.toString() ?? '-',
+              garduIndukId: _safeInt(extra['garduIndukId']),
+              isLast: extra['isLast'] == true,
             ),
           );
         },

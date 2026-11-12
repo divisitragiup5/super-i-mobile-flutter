@@ -7,6 +7,7 @@ import '../../domain/entities/sutm_inspeksi_score_entity.dart';
 import '../../domain/entities/sutm_pemeliharaan_score_entity.dart';
 import '../../domain/repositories/home_summary_repository.dart';
 import '../datasources/home_summary_remote_data_source.dart';
+import '../models/opgi_score_today_model.dart';
 import '../models/score_config_model.dart';
 import '../models/sutm_inspeksi_score_model.dart';
 import '../models/sutm_pemeliharaan_score_model.dart';
@@ -53,6 +54,24 @@ class HomeSummaryRepositoryImpl implements HomeSummaryRepository {
       return Right(_fallbackPemeliharaanMock());
     } on NetworkException {
       return Right(_fallbackPemeliharaanMock());
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, OpgiScoreTodayModel?>> getOpgiScoreToday({
+    String? timezone,
+  }) async {
+    try {
+      final model = await remoteDataSource.getOpgiScoreToday(
+        timezone: timezone,
+      );
+      return Right(model);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }

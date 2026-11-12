@@ -9,6 +9,19 @@ class PermissionService {
     return status.isGranted;
   }
 
+  /// Meminta izin Mikrofon untuk modul Perekaman Video Anomali.
+  Future<bool> requestMicrophonePermission() async {
+    final status = await Permission.microphone.request();
+    return status.isGranted;
+  }
+
+  /// Meminta izin Kamera & Mikrofon sekaligus untuk Perekaman Video.
+  Future<bool> requestVideoRecordingPermissions() async {
+    final cameraGranted = await requestCameraPermission();
+    final micGranted = await requestMicrophonePermission();
+    return cameraGranted && micGranted;
+  }
+
   /// Meminta izin Lokasi Presisi (GPS).
   /// Memastikan GPS hardware di perangkat aktif dan izin aplikasi diberikan.
   Future<bool> requestLocationPermission() async {

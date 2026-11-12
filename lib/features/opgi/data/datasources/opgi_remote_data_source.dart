@@ -64,6 +64,7 @@ abstract class OpgiRemoteDataSource {
 
   // Anomali
   Future<List<AnomaliReportModel>> getAnomaliHistory(int garduIndukId, {int? cursor});
+  Future<List<AnomaliKondisiModel>> getKondisiAnomaliHistory(int anomaliId, {int? cursor});
   Future<List<Map<String, dynamic>>> getAnomaliAssets(int garduIndukId, String jenisAsset);
   Future<void> submitAnomali({
     required Map<String, dynamic> data,
@@ -75,6 +76,7 @@ abstract class OpgiRemoteDataSource {
     XFile? imageFile,
     XFile? videoFile,
   });
+  Future<void> updateAnomaliKondisi(int kondisiId, Map<String, dynamic> data);
   Future<void> deleteAnomali(int id);
   Future<void> deleteAnomaliKondisi(int id);
 
@@ -972,6 +974,37 @@ class OpgiRemoteDataSourceImpl implements OpgiRemoteDataSource {
     await _client.post(
       '/gama/opgi-20kv/operator-gi/anomali-report/kondisi/input',
       data: formData,
+    );
+  }
+
+  @override
+  Future<List<AnomaliKondisiModel>> getKondisiAnomaliHistory(int anomaliId, {int? cursor}) async {
+    final response = await _client.get(
+      '/gama/opgi-20kv/operator-gi/anomali-report/kondisi/$anomaliId',
+      queryParameters: cursor != null ? {'cursor': cursor} : null,
+    );
+    final data = response.data['data'];
+    final items = data is Map ? data['items'] as List? : data as List?;
+    if (items == null) return [];
+    return items
+        .asMap()
+        .entries
+        .map((entry) => AnomaliKondisiModel.fromJson(
+              entry.value as Map<String, dynamic>,
+              isLast: entry.key == 0,
+            ))
+        .toList();
+  }
+
+  @override
+  Future<void> updateAnomaliKondisi(int kondisiId, Map<String, dynamic> data) async {
+    final payload = {
+      ...data,
+      if (!data.containsKey('timezone')) 'timezone': AppTimeUtils.deviceTimezone,
+    };
+    await _client.patch(
+      '/gama/opgi-20kv/operator-gi/anomali-report/kondisi/$kondisiId',
+      data: payload,
     );
   }
 

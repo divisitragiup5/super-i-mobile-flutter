@@ -105,11 +105,15 @@ class _MockOpgiRepo implements OpgiRepository {
   @override
   Future<List<AnomaliReportModel>> getAnomaliHistory(int garduIndukId, {int? cursor}) async => [];
   @override
+  Future<List<AnomaliKondisiModel>> getKondisiAnomaliHistory(int anomaliId, {int? cursor}) async => [];
+  @override
   Future<List<Map<String, dynamic>>> getAnomaliAssets(int garduIndukId, String jenisAsset) async => [];
   @override
   Future<void> submitAnomali({required Map<String, dynamic> data, XFile? imageFile, XFile? videoFile}) async {}
   @override
   Future<void> submitAnomaliKondisi({required Map<String, dynamic> data, XFile? imageFile, XFile? videoFile}) async {}
+  @override
+  Future<void> updateAnomaliKondisi(int kondisiId, Map<String, dynamic> data) async {}
   @override
   Future<void> deleteAnomali(int id) async {}
   @override

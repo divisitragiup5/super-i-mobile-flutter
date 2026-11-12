@@ -12,6 +12,7 @@ import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../../core/di/injection_container.dart';
 import '../cubit/drafts_cubit.dart';
 import '../cubit/line_walker_performance_cubit.dart';
+import '../cubit/opgi_score_cubit.dart';
 import '../cubit/ppl_condition_summary_cubit.dart';
 import '../cubit/sutm_inspeksi_score_cubit.dart';
 import '../cubit/sutm_pemeliharaan_score_cubit.dart';
@@ -73,6 +74,9 @@ class HomePage extends StatelessWidget {
         ),
         BlocProvider(
           create: (_) => sl<PplConditionSummaryCubit>()..fetchSummary(),
+        ),
+        BlocProvider(
+          create: (_) => sl<OpgiScoreCubit>()..fetchScore(),
         ),
         BlocProvider(
           create: (_) => sl<NotificationCubit>()..fetchUnreadCount(),
@@ -145,6 +149,7 @@ class HomePage extends StatelessWidget {
                             context.read<DraftsCubit>().loadDrafts();
                             context.read<LineWalkerPerformanceCubit>().fetchPerformance();
                             context.read<PplConditionSummaryCubit>().fetchSummary();
+                            context.read<OpgiScoreCubit>().fetchScore();
                           },
                           child: SingleChildScrollView(
                             physics: const AlwaysScrollableScrollPhysics(),

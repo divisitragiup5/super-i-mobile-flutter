@@ -56,6 +56,7 @@ abstract class OpgiRepository {
 
   // Anomali
   Future<List<AnomaliReportModel>> getAnomaliHistory(int garduIndukId, {int? cursor});
+  Future<List<AnomaliKondisiModel>> getKondisiAnomaliHistory(int anomaliId, {int? cursor});
   Future<List<Map<String, dynamic>>> getAnomaliAssets(int garduIndukId, String jenisAsset);
   Future<void> submitAnomali({
     required Map<String, dynamic> data,
@@ -67,6 +68,7 @@ abstract class OpgiRepository {
     XFile? imageFile,
     XFile? videoFile,
   });
+  Future<void> updateAnomaliKondisi(int kondisiId, Map<String, dynamic> data);
   Future<void> deleteAnomali(int id);
   Future<void> deleteAnomaliKondisi(int id);
 

@@ -17,9 +17,10 @@ import '../../features/home/data/repositories/home_summary_repository_impl.dart'
 import '../../features/home/domain/repositories/home_summary_repository.dart';
 import '../../features/home/presentation/cubit/drafts_cubit.dart';
 import '../../features/home/presentation/cubit/line_walker_performance_cubit.dart';
+import '../../features/home/presentation/cubit/opgi_score_cubit.dart';
+import '../../features/home/presentation/cubit/ppl_condition_summary_cubit.dart';
 import '../../features/home/presentation/cubit/sutm_inspeksi_score_cubit.dart';
 import '../../features/home/presentation/cubit/sutm_pemeliharaan_score_cubit.dart';
-import '../../features/home/presentation/cubit/ppl_condition_summary_cubit.dart';
 import '../network/dio_client.dart';
 import '../network/network_info.dart';
 import '../storage/local_database.dart';
@@ -185,6 +186,10 @@ Future<void> initDependencies() async {
 
   sl.registerFactory<SutmPemeliharaanScoreCubit>(
     () => SutmPemeliharaanScoreCubit(repository: sl<HomeSummaryRepository>()),
+  );
+
+  sl.registerFactory<OpgiScoreCubit>(
+    () => OpgiScoreCubit(repository: sl<HomeSummaryRepository>()),
   );
 
   sl.registerLazySingleton<DraftsCubit>(() => DraftsCubit());
