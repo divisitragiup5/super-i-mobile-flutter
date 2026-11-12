@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_background.dart';
+import '../../data/models/opgi_realisasi_model.dart';
 import '../cubit/opgi_realisasi_cubit.dart';
 
 class UpdateUrutanPenyulangPage extends StatefulWidget {
@@ -18,27 +21,36 @@ class UpdateUrutanPenyulangPage extends StatefulWidget {
 }
 
 class _UpdateUrutanPenyulangPageState extends State<UpdateUrutanPenyulangPage> {
-  List<Map<String, dynamic>> _items = [];
+  List<PenyulangModel> _items = [];
 
   @override
   void initState() {
     super.initState();
+    _initData();
+  }
+
+  void _initData() {
     final state = context.read<OpgiRealisasiCubit>().state;
     if (state is BebanPenyulangLoaded) {
-      final seen = <int>{};
-      final uniqueList = <Map<String, dynamic>>[];
-      for (final p in state.items) {
-        if (!seen.contains(p.penyulangId)) {
-          seen.add(p.penyulangId);
-          uniqueList.add({
-            'penyulangId': p.penyulangId,
-            'nama': p.namaPenyulang,
-            'urutan': p.urutan,
-          });
-        }
-      }
-      _items = uniqueList;
+      _items = [...state.items]..sort((a, b) => a.noUrutCustom.compareTo(b.noUrutCustom));
+    } else {
+      context.read<OpgiRealisasiCubit>().loadBebanPenyulang(widget.garduIndukId);
     }
+  }
+
+  void _onSave() {
+    final payload = <Map<String, dynamic>>[];
+    for (int i = 0; i < _items.length; i++) {
+      payload.add({
+        'id': _items[i].id,
+        'noUrutCustom': i + 1,
+      });
+    }
+
+    context.read<OpgiRealisasiCubit>().updateUrutanPenyulang(
+          widget.garduIndukId,
+          payload,
+        );
   }
 
   @override
@@ -48,42 +60,54 @@ class _UpdateUrutanPenyulangPageState extends State<UpdateUrutanPenyulangPage> {
         title: const Text('Urutkan Penyulang'),
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
+        actions: [
+          TextButton(
+            onPressed: _items.isEmpty ? null : _onSave,
+            child: const Text(
+              'Simpan',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
-            onPressed: () {
-              final payload = <Map<String, dynamic>>[];
-              for (int i = 0; i < _items.length; i++) {
-                payload.add({
-                  'penyulangId': _items[i]['penyulangId'],
-                  'urutan': i + 1,
-                });
-              }
-              context.read<OpgiRealisasiCubit>().updateUrutanPenyulang(
-                widget.garduIndukId,
-                payload,
+          ),
+        ],
+      ),
+      body: AppBackground(
+        child: BlocConsumer<OpgiRealisasiCubit, OpgiRealisasiState>(
+          listener: (context, state) {
+            if (state is OpgiRealisasiSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message), backgroundColor: Colors.green),
               );
               Navigator.of(context).pop(true);
-            },
-            child: const Text('Simpan Urutan'),
-          ),
-        ),
-      ),
-      body: _items.isEmpty
-          ? const Center(child: Text('Tidak ada penyulang untuk diurutkan'))
-          : ReorderableListView.builder(
+            } else if (state is OpgiRealisasiError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              );
+            } else if (state is BebanPenyulangLoaded) {
+              setState(() {
+                _items = [...state.items]..sort((a, b) => a.noUrutCustom.compareTo(b.noUrutCustom));
+              });
+            }
+          },
+          builder: (context, state) {
+            if (state is OpgiRealisasiLoading && _items.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (_items.isEmpty) {
+              return const Center(
+                child: Text('Tidak ada penyulang untuk diurutkan', style: TextStyle(color: Colors.grey)),
+              );
+            }
+
+            return ReorderableListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: _items.length,
               onReorderItem: (oldIndex, newIndex) {
                 setState(() {
-                  if (newIndex > oldIndex) newIndex -= 1;
                   final item = _items.removeAt(oldIndex);
                   _items.insert(newIndex, item);
                 });
@@ -91,19 +115,35 @@ class _UpdateUrutanPenyulangPageState extends State<UpdateUrutanPenyulangPage> {
               itemBuilder: (context, index) {
                 final item = _items[index];
                 return Card(
-                  key: ValueKey(item['penyulangId']),
+                  key: ValueKey(item.id),
                   margin: const EdgeInsets.only(bottom: 8),
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     leading: CircleAvatar(
-                      backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
-                      child: Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      child: Text(
+                        '${index + 1}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                      ),
                     ),
-                    title: Text(item['nama'] as String? ?? '-'),
-                    trailing: const Icon(Icons.drag_handle),
+                    title: Text(
+                      item.nama,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                    ),
+                    subtitle: Text(
+                      item.garduIndukNama,
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                    trailing: const Icon(Icons.drag_handle, color: Colors.grey),
                   ),
                 );
               },
-            ),
+            );
+          },
+        ),
+      ),
     );
   }
 }

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/route_constants.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_background.dart';
+import '../../../../core/widgets/qr_scanner_modal.dart';
+import '../widgets/opgi_menu_card.dart';
 
 class Il1HubPage extends StatelessWidget {
   final int garduIndukId;
@@ -12,108 +17,146 @@ class Il1HubPage extends StatelessWidget {
     required this.garduIndukNama,
   });
 
+  Future<void> _handleScan(BuildContext context, String title, String route) async {
+    final code = await QrScannerModal.scan(
+      context,
+      title: 'Scan QR $title',
+    );
+    if (code != null && code.trim().isNotEmpty && context.mounted) {
+      context.push(
+        route,
+        extra: {
+          'garduIndukId': garduIndukId,
+          'garduIndukNama': garduIndukNama,
+          'scanValue': code.trim(),
+        },
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final menuItems = [
-      {
-        'title': 'IL1 KUBIKEL',
-        'desc': garduIndukNama,
-        'icon': Icons.dns_outlined,
-        'route': '/il1-kubikel',
-        'color': const Color(0xFF00796B),
-      },
-      {
-        'title': 'IL1 TRAFO PS',
-        'desc': garduIndukNama,
-        'icon': Icons.view_in_ar_outlined,
-        'route': '/il1-trafo-ps',
-        'color': const Color(0xFF1565C0),
-      },
-      {
-        'title': 'IL1 SIPIL',
-        'desc': garduIndukNama,
-        'icon': Icons.apartment_outlined,
-        'route': '/il1-sipil',
-        'color': const Color(0xFF6A1B9A),
-      },
-    ];
+    final titleText = garduIndukNama.isNotEmpty && garduIndukNama != '-'
+        ? 'Inspeksi Level 1 - $garduIndukNama'
+        : 'Inspeksi Level 1';
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Inspeksi Level 1 - $garduIndukNama'),
+        title: Text(titleText),
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: menuItems.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final item = menuItems[index];
-          final color = item['color'] as Color;
-          return InkWell(
-            onTap: () {
-              context.push(
-                item['route'] as String,
-                extra: {
-                  'garduIndukId': garduIndukId,
-                  'garduIndukNama': garduIndukNama,
+      body: AppBackground(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              if (garduIndukId == 0) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    border: Border.all(color: Colors.amber.shade400),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: Colors.amber.shade900),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Gardu Induk Belum Dipilih',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber.shade900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Silakan pilih Gardu Induk terlebih dahulu agar data inspeksi dapat dimuat dengan tepat.',
+                        style: TextStyle(fontSize: 13, color: Colors.amber.shade900),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () {
+                          context.push(
+                            AppRoutes.garduInduk20kv,
+                            extra: {'redirectPath': AppRoutes.il1},
+                          );
+                        },
+                        icon: const Icon(Icons.arrow_forward, size: 16),
+                        label: const Text('Pilih Gardu Induk'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              OpgiMenuCard(
+                title: 'IL1 KUBIKEL',
+                description: garduIndukNama,
+                icon: Icons.dns_outlined,
+                iconColor: const Color(0xFF00796B),
+                useScanner: true,
+                onTap: () {
+                  context.push(
+                    AppRoutes.il1Kubikel,
+                    extra: {
+                      'garduIndukId': garduIndukId,
+                      'garduIndukNama': garduIndukNama,
+                    },
+                  );
                 },
-              );
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                onScanTap: () => _handleScan(context, 'IL1 Kubikel', AppRoutes.il1Kubikel),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(item['icon'] as IconData, color: color, size: 28),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item['title'] as String,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          item['desc'] as String,
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right, color: Colors.grey),
-                ],
+              const SizedBox(height: 12),
+              OpgiMenuCard(
+                title: 'IL1 TRAFO PS',
+                description: garduIndukNama,
+                icon: Icons.view_in_ar_outlined,
+                iconColor: const Color(0xFF1565C0),
+                useScanner: true,
+                onTap: () {
+                  context.push(
+                    AppRoutes.il1TrafoPs,
+                    extra: {
+                      'garduIndukId': garduIndukId,
+                      'garduIndukNama': garduIndukNama,
+                    },
+                  );
+                },
+                onScanTap: () => _handleScan(context, 'IL1 Trafo PS', AppRoutes.il1TrafoPs),
               ),
-            ),
-          );
-        },
+              const SizedBox(height: 12),
+              OpgiMenuCard(
+                title: 'IL1 SIPIL',
+                description: garduIndukNama,
+                icon: Icons.apartment_outlined,
+                iconColor: const Color(0xFF6A1B9A),
+                useScanner: false,
+                onTap: () {
+                  context.push(
+                    AppRoutes.il1Sipil,
+                    extra: {
+                      'garduIndukId': garduIndukId,
+                      'garduIndukNama': garduIndukNama,
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

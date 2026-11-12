@@ -7,7 +7,8 @@ class ApiConstants {
   // Mengambil URL dari file .env secara dinamis, dengan fallback jika .env tidak terbaca
   static String get baseUrl {
     try {
-      return dotenv.env['BASE_URL'] ?? 'https://super-i-app.haleyorapower.co.id/api';
+      return dotenv.env['BASE_URL'] ??
+          'https://super-i-app.haleyorapower.co.id/api';
     } catch (_) {
       return 'https://super-i-app.haleyorapower.co.id/api';
     }
@@ -22,4 +23,5 @@ class ApiConstants {
   static const String login = '/auth/login-mobile';
   static const String userMe = '/data/user/me';
   static const String changePassword = '/data/user/password';
+  static const String refreshToken = '/auth/refresh';
 }

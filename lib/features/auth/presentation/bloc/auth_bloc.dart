@@ -40,12 +40,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // .fold() dari fpdart membedah hasil Either:
     // (kiri = failure, kanan = user)
-    result.fold(
-      (failure) => emit(AuthFailureState(failure.message)),
-      (user) {
+    await result.fold(
+      (failure) async => emit(AuthFailureState(failure.message)),
+      (user) async {
+        // Bersihkan cache API lama agar data segar milik user ini yang dimuat
+        await LocalDatabase.instance.clearApiCache();
         emit(AuthAuthenticated(user));
-        // Prefetch seluruh tower/objek Line Walker di background
-        unawaited(lineWalkerRepository?.prefetchTowers() ?? Future.value());
+        // Prefetch seluruh tower/objek Line Walker di background hanya untuk user Line Walker
+        if (user.canAccessLineWalkerTower) {
+          unawaited(lineWalkerRepository?.prefetchTowers() ?? Future.value());
+        }
       },
     );
   }
@@ -63,8 +67,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (failure) => emit(AuthUnauthenticated()),
       (user) {
         emit(AuthAuthenticated(user));
-        // Prefetch seluruh tower/objek Line Walker di background
-        unawaited(lineWalkerRepository?.prefetchTowers() ?? Future.value());
+        // Prefetch seluruh tower/objek Line Walker di background hanya untuk user Line Walker
+        if (user.canAccessLineWalkerTower) {
+          unawaited(lineWalkerRepository?.prefetchTowers() ?? Future.value());
+        }
       },
     );
   }

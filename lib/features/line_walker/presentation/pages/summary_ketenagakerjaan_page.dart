@@ -53,6 +53,14 @@ class _SummaryKetenagakerjaanPageState extends State<SummaryKetenagakerjaanPage>
         title: const Text('Ketenagakerjaan'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<KetenagakerjaanCubit>().loadSummary(search: _searchCtrl.text);
+            },
+          ),
+        ],
       ),
       body: AppBackground(
         child: Column(
@@ -119,6 +127,7 @@ class _SummaryKetenagakerjaanPageState extends State<SummaryKetenagakerjaanPage>
                   return RefreshIndicator(
                     onRefresh: () => context.read<KetenagakerjaanCubit>().loadSummary(search: _searchCtrl.text),
                     child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       controller: _scrollCtrl,
                       padding: const EdgeInsets.all(16),
                       itemCount: items.length + (state.isLoadingMore ? 1 : 0),

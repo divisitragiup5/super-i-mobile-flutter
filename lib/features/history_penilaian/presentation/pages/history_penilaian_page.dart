@@ -36,6 +36,16 @@ class HistoryPenilaianPage extends StatelessWidget {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
+          actions: [
+            Builder(
+              builder: (ctx) => IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  ctx.read<HistoryPenilaianCubit>().fetchHistory();
+                },
+              ),
+            ),
+          ],
         ),
         body: Stack(
           children: [

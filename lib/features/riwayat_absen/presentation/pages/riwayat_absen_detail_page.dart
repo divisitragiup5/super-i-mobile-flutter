@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/app_url_utils.dart';
 import '../../data/models/riwayat_absen_model.dart';
 
 class RiwayatAbsenDetailPage extends StatelessWidget {
@@ -27,6 +28,9 @@ class RiwayatAbsenDetailPage extends StatelessWidget {
   }
 
   void _showEnlargedImage(BuildContext context, String url, String title) {
+    final fullUrl = AppUrlUtils.getFullImageUrl(url);
+    if (fullUrl.isEmpty) return;
+
     showDialog(
       context: context,
       builder: (dialogCtx) => Dialog(
@@ -61,7 +65,7 @@ class RiwayatAbsenDetailPage extends StatelessWidget {
                     minScale: 0.5,
                     maxScale: 4.0,
                     child: Image.network(
-                      url,
+                      fullUrl,
                       fit: BoxFit.contain,
                       loadingBuilder: (context, child, progress) {
                         if (progress == null) return child;
@@ -301,8 +305,27 @@ class RiwayatAbsenDetailPage extends StatelessWidget {
     String url,
     String title,
   ) {
+    final fullUrl = AppUrlUtils.getFullImageUrl(url);
+    if (fullUrl.isEmpty) {
+      return Container(
+        height: 100,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFCBD5E1)),
+        ),
+        child: const Center(
+          child: Text(
+            'Tidak ada foto',
+            style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+          ),
+        ),
+      );
+    }
+
     return GestureDetector(
-      onTap: () => _showEnlargedImage(context, url, title),
+      onTap: () => _showEnlargedImage(context, fullUrl, title),
       child: Container(
         height: 180,
         width: double.infinity,
@@ -316,7 +339,7 @@ class RiwayatAbsenDetailPage extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Image.network(
-              url,
+              fullUrl,
               fit: BoxFit.cover,
               loadingBuilder: (context, child, progress) {
                 if (progress == null) return child;

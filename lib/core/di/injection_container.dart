@@ -292,7 +292,10 @@ Future<void> initDependencies() async {
     () => LineWalkerRemoteDataSourceImpl(sl<DioClient>()),
   );
   sl.registerLazySingleton<LineWalkerRepository>(
-    () => LineWalkerRepositoryImpl(sl<LineWalkerRemoteDataSource>()),
+    () => LineWalkerRepositoryImpl(
+      sl<LineWalkerRemoteDataSource>(),
+      sl<PreferencesService>(),
+    ),
   );
   sl.registerFactory<WaterpassCubit>(
     () => WaterpassCubit(sl<LineWalkerRepository>()),

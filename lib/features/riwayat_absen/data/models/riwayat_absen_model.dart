@@ -102,6 +102,13 @@ class RiwayatAbsenItemModel {
       picOut = json['pictureOut'] as String;
     }
 
+    String? fotoBukti;
+    if (json['fotoBuktiPremi'] is Map) {
+      fotoBukti = json['fotoBuktiPremi']['uri'] as String?;
+    } else if (json['fotoBuktiPremi'] is String) {
+      fotoBukti = json['fotoBuktiPremi'] as String;
+    }
+
     String? pengganti;
     if (json['penggantiAbsen'] is Map &&
         json['penggantiAbsen']['absensi'] is Map &&
@@ -135,7 +142,7 @@ class RiwayatAbsenItemModel {
       durasiTelatOut: json['durasiTelatOut'] as int?,
       durasiKerja: json['durasiKerja'] as int?,
       premi: json['premi'] as String?,
-      fotoBuktiPremi: json['fotoBuktiPremi'] as String?,
+      fotoBuktiPremi: fotoBukti,
       izin: json['izin'] as String?,
       diagnosaSakit: json['diagnosaSakit'] as String?,
       pictureInUri: picIn,

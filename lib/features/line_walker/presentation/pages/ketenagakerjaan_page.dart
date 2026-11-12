@@ -178,6 +178,14 @@ class _KetenagakerjaanPageState extends State<KetenagakerjaanPage> {
         title: Text(_effectiveNama ?? 'Kinerja Ketenagakerjaan'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<KetenagakerjaanCubit>().loadDetail(_effectiveId);
+            },
+          ),
+        ],
       ),
       body: AppBackground(
         child: BlocBuilder<KetenagakerjaanCubit, KetenagakerjaanState>(
@@ -225,6 +233,7 @@ class _KetenagakerjaanPageState extends State<KetenagakerjaanPage> {
               return RefreshIndicator(
                 onRefresh: () => context.read<KetenagakerjaanCubit>().loadDetail(_effectiveId),
                 child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   controller: _scrollCtrl,
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length + (state.isLoadingMore ? 1 : 0),

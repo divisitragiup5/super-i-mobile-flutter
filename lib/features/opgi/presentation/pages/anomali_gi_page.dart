@@ -50,14 +50,14 @@ class _AnomaliGiPageState extends State<AnomaliGiPage> {
         icon: const Icon(Icons.add_alert),
         label: const Text('Lapor Anomali'),
         onPressed: () async {
-          final res = await context.push(
+          await context.push(
             '/input-anomali-gi',
             extra: {
               'garduIndukId': widget.garduIndukId,
               'garduIndukNama': widget.garduIndukNama,
             },
           );
-          if (res == true) _fetch();
+          _fetch();
         },
       ),
       body: BlocConsumer<OpgiAnomaliCubit, OpgiAnomaliState>(
@@ -82,20 +82,33 @@ class _AnomaliGiPageState extends State<AnomaliGiPage> {
             final drafts = state.localDrafts;
 
             if (items.isEmpty && drafts.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              return RefreshIndicator(
+                onRefresh: () async => _fetch(),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(32),
                   children: [
-                    Icon(Icons.check_circle_outline, size: 64, color: Colors.green.shade400),
-                    const SizedBox(height: 12),
-                    const Text('Tidak ada laporan anomali di GI ini'),
+                    const SizedBox(height: 80),
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle_outline, size: 64, color: Colors.green.shade400),
+                          const SizedBox(height: 12),
+                          const Text('Tidak ada laporan anomali di GI ini'),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               );
             }
 
-            return ListView(
-              padding: const EdgeInsets.all(16),
+            return RefreshIndicator(
+              onRefresh: () async => _fetch(),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
               children: [
                 // Drafts
                 if (drafts.isNotEmpty) ...[
@@ -278,7 +291,8 @@ class _AnomaliGiPageState extends State<AnomaliGiPage> {
                   );
                 }),
               ],
-            );
+            ),
+          );
           }
           return const SizedBox.shrink();
         },

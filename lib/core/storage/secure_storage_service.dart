@@ -27,4 +27,19 @@ class SecureStorageService {
   Future<void> clearAll() async {
     await _storage.deleteAll();
   }
+
+  /// Simpan Refresh Token
+  Future<void> saveRefreshToken(String token) async {
+    await _storage.write(key: StorageConstants.refreshToken, value: token);
+  }
+
+  /// Ambil Refresh Token
+  Future<String?> getRefreshToken() async {
+    return await _storage.read(key: StorageConstants.refreshToken);
+  }
+
+  /// Hapus Refresh Token
+  Future<void> deleteRefreshToken() async {
+    await _storage.delete(key: StorageConstants.refreshToken);
+  }
 }

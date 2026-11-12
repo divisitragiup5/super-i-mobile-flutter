@@ -31,6 +31,7 @@ class AbsenRemoteDataSourceImpl implements AbsenRemoteDataSource {
       final response = await dioClient.dio.get(
         '/absensi/info',
         queryParameters: {'timezone': 'Asia/Jakarta'},
+        options: Options(extra: {'no_cache': true}),
       );
 
       final data = response.data['data'] as Map<String, dynamic>;

@@ -66,6 +66,19 @@ class NotificationPage extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Notifikasi'),
           centerTitle: true,
+          actions: [
+            Builder(
+              builder: (ctx) => IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  final state = ctx.read<NotificationCubit>().state;
+                  final filter =
+                      state is NotificationLoaded ? state.currentFilter : null;
+                  ctx.read<NotificationCubit>().fetchNotifications(isRead: filter);
+                },
+              ),
+            ),
+          ],
         ),
         body: Stack(
           children: [
@@ -228,32 +241,44 @@ class NotificationPage extends StatelessWidget {
                           }
                           if (state is NotificationLoaded) {
                             if (state.items.isEmpty) {
-                              return Center(
-                                child: Container(
-                                  padding: const EdgeInsets.all(24),
-                                  margin: const EdgeInsets.all(24),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.notifications_off_outlined,
-                                        size: 48,
-                                        color: Colors.grey.shade400,
-                                      ),
-                                      const SizedBox(height: 12),
-                                      const Text(
-                                        'Tidak ada notifikasi',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
+                              return RefreshIndicator(
+                                onRefresh: () =>
+                                    cubit.fetchNotifications(isRead: filter),
+                                child: ListView(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  children: [
+                                    SizedBox(
+                                      height: MediaQuery.of(context).size.height * 0.15,
+                                    ),
+                                    Center(
+                                      child: Container(
+                                        padding: const EdgeInsets.all(24),
+                                        margin: const EdgeInsets.all(24),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.notifications_off_outlined,
+                                              size: 48,
+                                              color: Colors.grey.shade400,
+                                            ),
+                                            const SizedBox(height: 12),
+                                            const Text(
+                                              'Tidak ada notifikasi',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               );
                             }
@@ -262,6 +287,7 @@ class NotificationPage extends StatelessWidget {
                               onRefresh: () =>
                                   cubit.fetchNotifications(isRead: filter),
                               child: ListView.separated(
+                                physics: const AlwaysScrollableScrollPhysics(),
                                 padding: const EdgeInsets.fromLTRB(
                                   16,
                                   4,

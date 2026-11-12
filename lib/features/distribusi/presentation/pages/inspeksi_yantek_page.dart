@@ -138,6 +138,12 @@ class _InspeksiYantekPageState extends State<InspeksiYantekPage> {
         title: const Text('Inspeksi YANTEK'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _initLiveLocation,
+          ),
+        ],
       ),
       body: BlocBuilder<YantekCubit, YantekState>(
         builder: (context, state) {

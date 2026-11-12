@@ -106,9 +106,11 @@ class HomePage extends StatelessWidget {
 
               final user = state.user;
 
-              // Filter menu sesuai roles user
+              // Filter menu sesuai roles user (Admin Super memiliki akses ke seluruh menu)
+              final isAdminSuper = user.roles.contains(AppRoles.adminSuper);
               final allowedMenus = MenuItemModel.allMenus.where((menu) {
-                return menu.allowedRoles.any((role) => user.roles.contains(role));
+                return isAdminSuper ||
+                    menu.allowedRoles.any((role) => user.roles.contains(role));
               }).toList();
 
               return Stack(

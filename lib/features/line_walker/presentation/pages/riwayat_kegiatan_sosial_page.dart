@@ -461,6 +461,14 @@ class _RiwayatKegiatanSosialPageState extends State<RiwayatKegiatanSosialPage> {
         title: const Text('Riwayat Kegiatan Sosial'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<KegiatanSosialCubit>().loadHistory(search: _searchCtrl.text);
+            },
+          ),
+        ],
       ),
       body: AppBackground(
         child: Column(
@@ -526,6 +534,7 @@ class _RiwayatKegiatanSosialPageState extends State<RiwayatKegiatanSosialPage> {
                     return RefreshIndicator(
                       onRefresh: () => context.read<KegiatanSosialCubit>().loadHistory(search: _searchCtrl.text),
                       child: ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         controller: _scrollCtrl,
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         itemCount: items.length + (state.isLoadingMore ? 1 : 0),

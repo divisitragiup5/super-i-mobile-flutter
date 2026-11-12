@@ -18,6 +18,7 @@ void main() async {
 
   // Inisialisasi format tanggal bahasa Indonesia
   await initializeDateFormatting('id_ID', null);
+  await initializeDateFormatting('id', null);
 
   // 2. Muat variabel lingkungan dari file .env
   await dotenv.load(fileName: ".env");

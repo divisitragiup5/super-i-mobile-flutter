@@ -196,28 +196,48 @@ class MenuItemModel {
       icon: Icons.note_alt_outlined,
       route: '/gardu-induk-20kv',
       params: {'redirectPath': '/input-realisasi'},
-      allowedRoles: [AppRoles.operatorGi20kv],
+      allowedRoles: [
+        AppRoles.operatorGi20kv,
+        AppRoles.koordinatorGi20kv,
+        AppRoles.teamLeaderGi,
+        AppRoles.adminSuper,
+      ],
     ),
     MenuItemModel(
       label: 'IL 1',
       icon: Icons.checklist_rtl_outlined,
       route: '/gardu-induk-20kv',
       params: {'redirectPath': '/il-1'},
-      allowedRoles: [AppRoles.operatorGi20kv],
+      allowedRoles: [
+        AppRoles.operatorGi20kv,
+        AppRoles.koordinatorGi20kv,
+        AppRoles.teamLeaderGi,
+        AppRoles.adminSuper,
+      ],
     ),
     MenuItemModel(
       label: 'Manuver',
       icon: Icons.alt_route_outlined,
       route: '/gardu-induk-20kv',
       params: {'redirectPath': '/manuver'},
-      allowedRoles: [AppRoles.operatorGi20kv],
+      allowedRoles: [
+        AppRoles.operatorGi20kv,
+        AppRoles.koordinatorGi20kv,
+        AppRoles.teamLeaderGi,
+        AppRoles.adminSuper,
+      ],
     ),
     MenuItemModel(
       label: 'Anomali',
       icon: Icons.warning_amber_rounded,
       route: '/gardu-induk-20kv',
       params: {'redirectPath': '/anomali-gi'},
-      allowedRoles: [AppRoles.operatorGi20kv],
+      allowedRoles: [
+        AppRoles.operatorGi20kv,
+        AppRoles.koordinatorGi20kv,
+        AppRoles.teamLeaderGi,
+        AppRoles.adminSuper,
+      ],
     ),
 
     // ─────────────────────────────────────────────────────────────

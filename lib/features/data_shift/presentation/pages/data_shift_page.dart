@@ -90,6 +90,19 @@ class _DataShiftPageState extends State<DataShiftPage> {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
+          actions: [
+            Builder(
+              builder: (ctx) => IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  ctx.read<DataShiftCubit>().fetchShifts(
+                        bulan: _selectedMonth,
+                        tahun: _selectedYear,
+                      );
+                },
+              ),
+            ),
+          ],
         ),
         body: Stack(
           children: [

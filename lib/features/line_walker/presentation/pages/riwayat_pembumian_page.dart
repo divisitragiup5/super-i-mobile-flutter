@@ -186,6 +186,16 @@ class _RiwayatPembumianPageState extends State<RiwayatPembumianPage> {
         title: const Text('Riwayat Pembumian'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<PembumianCubit>().loadHistory(
+                    search: _searchController.text.trim(),
+                  );
+            },
+          ),
+        ],
       ),
       body: AppBackground(
         child: Column(
@@ -251,6 +261,7 @@ class _RiwayatPembumianPageState extends State<RiwayatPembumianPage> {
                             search: _searchController.text.trim(),
                           ),
                       child: ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         controller: _scrollController,
                         padding: const EdgeInsets.all(16),
                         itemCount: items.length + (state.isLoadingMore ? 1 : 0),

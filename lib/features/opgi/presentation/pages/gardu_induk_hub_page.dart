@@ -27,6 +27,13 @@ class _GarduIndukHubPageState extends State<GarduIndukHubPage> {
         title: const Text('Pilih Gardu Induk 20kV'),
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+            onPressed: () => context.read<GarduIndukCubit>().loadGarduInduk(),
+          ),
+        ],
       ),
       body: BlocBuilder<GarduIndukCubit, GarduIndukState>(
         builder: (context, state) {
@@ -50,10 +57,22 @@ class _GarduIndukHubPageState extends State<GarduIndukHubPage> {
           }
           if (state is GarduIndukLoaded) {
             if (state.list.isEmpty) {
-              return const Center(child: Text('Tidak ada Gardu Induk tersedia'));
+              return RefreshIndicator(
+                onRefresh: () async => context.read<GarduIndukCubit>().loadGarduInduk(),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: const [
+                    SizedBox(height: 100),
+                    Center(child: Text('Tidak ada Gardu Induk tersedia')),
+                  ],
+                ),
+              );
             }
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
+            return RefreshIndicator(
+              onRefresh: () async => context.read<GarduIndukCubit>().loadGarduInduk(),
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
               itemCount: state.list.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
@@ -123,7 +142,8 @@ class _GarduIndukHubPageState extends State<GarduIndukHubPage> {
                   ),
                 );
               },
-            );
+            ),
+          );
           }
           return const SizedBox.shrink();
         },

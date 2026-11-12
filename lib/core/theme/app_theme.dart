@@ -56,7 +56,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(48), // Tinggi tombol standar 48px
+          minimumSize: const Size(0, 48), // Tinggi tombol standar 48px, lebar fleksibel
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10), // Sudut membulat modern
           ),

@@ -34,6 +34,14 @@ class _DetailWorkorderPageState extends State<DetailWorkorderPage> {
         title: Text(widget.title ?? 'Detail Work Order'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<WoInspeksiCubit>().fetchDetail(widget.workOrderId);
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -45,53 +53,73 @@ class _DetailWorkorderPageState extends State<DetailWorkorderPage> {
                   Container(color: AppColors.backgroundLight),
             ),
           ),
-          BlocBuilder<WoInspeksiCubit, WoInspeksiState>(
-            builder: (context, state) {
-              if (state is WoInspeksiLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          RefreshIndicator(
+            onRefresh: () async {
+              await context.read<WoInspeksiCubit>().fetchDetail(widget.workOrderId);
+            },
+            child: BlocBuilder<WoInspeksiCubit, WoInspeksiState>(
+              builder: (context, state) {
+                if (state is WoInspeksiLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-              if (state is WoInspeksiError) {
-                return Center(
-                  child: Container(
-                    margin: const EdgeInsets.all(24),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.error_outline,
-                            color: AppColors.error, size: 48),
-                        const SizedBox(height: 12),
-                        Text(state.message, textAlign: TextAlign.center),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => context
-                              .read<WoInspeksiCubit>()
-                              .fetchDetail(widget.workOrderId),
-                          child: const Text('Coba Lagi'),
+                if (state is WoInspeksiError) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                      Center(
+                        child: Container(
+                          margin: const EdgeInsets.all(24),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error_outline,
+                                  color: AppColors.error, size: 48),
+                              const SizedBox(height: 12),
+                              Text(state.message, textAlign: TextAlign.center),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () => context
+                                    .read<WoInspeksiCubit>()
+                                    .fetchDetail(widget.workOrderId),
+                                child: const Text('Coba Lagi'),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              }
+                      ),
+                    ],
+                  );
+                }
 
-              final wo = state is WoInspeksiLoaded
-                  ? state.detailWorkOrder
-                  : null;
+                final wo = state is WoInspeksiLoaded
+                    ? state.detailWorkOrder
+                    : null;
 
-              if (wo == null) {
-                return const Center(
-                  child: Text('Data work order tidak ditemukan'),
-                );
-              }
+                if (wo == null) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                      const Center(
+                        child: Text(
+                          'Data work order tidak ditemukan',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  );
+                }
 
-              return ListView(
-                padding: const EdgeInsets.all(16),
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
                 children: [
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -192,8 +220,9 @@ class _DetailWorkorderPageState extends State<DetailWorkorderPage> {
               );
             },
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 }

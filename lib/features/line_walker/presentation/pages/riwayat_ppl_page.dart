@@ -467,6 +467,17 @@ class _RiwayatPPLPageState extends State<RiwayatPPLPage> {
         title: Text(pageTitle),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<PplCubit>().loadHistory(
+                    search: _searchController.text,
+                    type: widget.type,
+                  );
+            },
+          ),
+        ],
       ),
       body: AppBackground(
         child: Column(
@@ -538,6 +549,7 @@ class _RiwayatPPLPageState extends State<RiwayatPPLPage> {
                             type: widget.type,
                           ),
                       child: ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         controller: _scrollController,
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         itemCount: items.length + (state.isLoadingMore ? 1 : 0),

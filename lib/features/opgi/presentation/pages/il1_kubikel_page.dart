@@ -1,17 +1,25 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/route_constants.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_background.dart';
+import '../../data/models/opgi_il1_model.dart';
 import '../cubit/opgi_il1_cubit.dart';
+import '../utils/il1_kubikel_utils.dart';
 
 class Il1KubikelPage extends StatefulWidget {
   final int garduIndukId;
   final String garduIndukNama;
+  final String? scanValue;
 
   const Il1KubikelPage({
     super.key,
     required this.garduIndukId,
     required this.garduIndukNama,
+    this.scanValue,
   });
 
   @override
@@ -19,151 +27,509 @@ class Il1KubikelPage extends StatefulWidget {
 }
 
 class _Il1KubikelPageState extends State<Il1KubikelPage> {
+  bool _isSavingBatch = false;
+  int _batchCompleted = 0;
+  int _batchTotal = 0;
+  bool _scanHandled = false;
+
   @override
   void initState() {
     super.initState();
     _fetch();
   }
 
-  void _fetch() {
-    context.read<OpgiIl1Cubit>().loadKubikel(widget.garduIndukId);
+  void _fetch({bool force = false}) {
+    context.read<OpgiIl1Cubit>().loadKubikel(widget.garduIndukId, forceRefresh: force);
+  }
+
+  void _checkScanValue(List<Il1KubikelItem> items) {
+    if (_scanHandled || widget.scanValue == null || widget.scanValue!.trim().isEmpty) return;
+
+    final query = widget.scanValue!.trim();
+    final target = items.firstWhere(
+      (it) =>
+          '${it.nama}-${widget.garduIndukNama}' == query ||
+          '${it.nama}-${it.garduIndukNama}' == query ||
+          it.nama == query,
+      orElse: () => const Il1KubikelItem(id: -1, nama: ''),
+    );
+
+    _scanHandled = true;
+
+    if (target.id == -1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('QR Code yang anda scan tidak cocok dengan data kubikel ini'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      });
+      return;
+    }
+
+    if (target.isDisabled || target.last != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('QR Code yang anda scan tidak valid atau sudah selesai'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      });
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _navigateToInput(target);
+    });
+  }
+
+  void _navigateToInput(Il1KubikelItem item) {
+    context.push(
+      AppRoutes.inputIl1Kubikel,
+      extra: {
+        'id': item.id,
+        'nama': item.nama,
+        'garduInduk': widget.garduIndukNama,
+        'garduIndukId': widget.garduIndukId,
+        'last': item.lastData != null ? jsonEncode(item.lastData) : null,
+        'merkKubikel': item.merkKubikel,
+        'rel': item.rel,
+        'trafoId': item.trafoId,
+      },
+    ).then((_) => _fetch(force: true));
+  }
+
+  void _navigateToDetail(Il1KubikelItem item) {
+    context.push(
+      AppRoutes.dataIl1Kubikel,
+      extra: {
+        'id': item.id,
+        'nama': item.nama,
+        'garduInduk': widget.garduIndukNama,
+        'garduIndukId': widget.garduIndukId,
+        'status': item.last?['status']?.toString() ?? '',
+      },
+    ).then((_) => _fetch(force: true));
+  }
+
+  void _handleSaveDrafts(List<Map<String, dynamic>> parsedDrafts) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Peringatan'),
+        content: const Text('Apakah anda yakin ingin menyimpan semua data draft yang sudah lengkap?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.read<OpgiIl1Cubit>().batchSubmitKubikel(widget.garduIndukId, parsedDrafts);
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleDeleteAllDrafts() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Peringatan'),
+        content: const Text('Apakah anda yakin ingin menghapus semua data draft yang ada?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await context.read<OpgiIl1Cubit>().deleteAllDrafts('il1-kubikel');
+              _fetch(force: true);
+            },
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String? status) {
+    if (status == null) return Colors.grey.shade400;
+    final s = status.toUpperCase();
+    if (s.contains('SESUAI') && !s.contains('TIDAK')) return const Color(0xFF16A34A);
+    if (s.contains('ANOMALI')) return const Color(0xFFEA580C);
+    if (s.contains('TIDAK SESUAI')) return const Color(0xFFDC2626);
+    return Colors.grey.shade500;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('IL1 Kubikel - ${widget.garduIndukNama}'),
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetch,
-          ),
-        ],
-      ),
-      body: BlocConsumer<OpgiIl1Cubit, OpgiIl1State>(
-        listener: (context, state) {
-          if (state is OpgiIl1Success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.green),
-            );
-            _fetch();
-          } else if (state is OpgiIl1Error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
-            );
+    return BlocConsumer<OpgiIl1Cubit, OpgiIl1State>(
+      listener: (context, state) {
+        if (state is OpgiBatchProgress) {
+          setState(() {
+            _isSavingBatch = true;
+            _batchCompleted = state.completed;
+            _batchTotal = state.total;
+          });
+        } else if (state is OpgiIl1Success) {
+          if (_isSavingBatch) {
+            setState(() => _isSavingBatch = false);
           }
-        },
-        builder: (context, state) {
-          if (state is OpgiIl1Loading) {
-            return const Center(child: CircularProgressIndicator());
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message), backgroundColor: Colors.green),
+          );
+        } else if (state is OpgiIl1Error) {
+          if (_isSavingBatch) {
+            setState(() => _isSavingBatch = false);
           }
-          if (state is Il1KubikelLoaded) {
-            final items = state.items;
-            final drafts = state.localDrafts;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+          );
+        }
+      },
+      builder: (context, state) {
+        final cubit = context.read<OpgiIl1Cubit>();
+        final items = cubit.cachedKubikelList;
+        final rawDrafts = cubit.cachedKubikelDrafts;
 
-            if (items.isEmpty && drafts.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.dns_outlined, size: 64, color: Colors.grey.shade400),
-                    const SizedBox(height: 12),
-                    const Text('Tidak ada data kubikel penyulang'),
-                  ],
-                ),
-              );
-            }
+        // Parse drafts
+        final parseResult = Il1KubikelUtils.parseIl1KubikelDrafts(
+          rawDrafts,
+          widget.garduIndukId,
+          items,
+        );
+        final validDrafts = parseResult.parsed;
+        final validDraftCount = validDrafts.length;
+        final allDraftCount = rawDrafts.length;
 
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Drafts
-                if (drafts.isNotEmpty) ...[
-                  Text(
-                    'Draft Tersimpan (${drafts.length})',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+        // Auto-route on scan
+        if (items.isNotEmpty && !_scanHandled && widget.scanValue != null) {
+          _checkScanValue(items);
+        }
+
+        return PopScope(
+          canPop: !_isSavingBatch,
+          child: Scaffold(
+            appBar: AppBar(
+              title: Text('IL1 Kubikel - ${widget.garduIndukNama}'),
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              actions: [
+                if (validDraftCount > 0 && !_isSavingBatch)
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.save_outlined, color: Color(0xFF22C55E), size: 26),
+                        tooltip: 'Simpan Semua Draft',
+                        onPressed: () => _handleSaveDrafts(validDrafts),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF22C55E),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '$validDraftCount',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  ...drafts.map((d) {
-                    return Card(
-                      color: Colors.orange.shade50,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: const Icon(Icons.edit_note, color: Colors.orange),
-                        title: Text(d['nama'] as String? ?? 'Draft'),
-                        subtitle: Text(d['date'] as String? ?? ''),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                          onPressed: () {
-                            if (d['id'] != null) {
-                              context.read<OpgiIl1Cubit>().deleteDraft(d['id'] as int).then((_) => _fetch());
-                            }
-                          },
+                if (allDraftCount > 0 && !_isSavingBatch)
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 26),
+                        tooltip: 'Hapus Semua Draft',
+                        onPressed: _handleDeleteAllDrafts,
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFEF4444),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '$allDraftCount',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
-                    );
-                  }),
-                  const Divider(height: 24),
-                ],
-
-                // Items list
-                Text(
-                  'Daftar Kubikel (${items.length})',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ],
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'Refresh',
+                  onPressed: () => _fetch(force: true),
                 ),
-                const SizedBox(height: 12),
-                ...items.map((k) {
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: 1,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      leading: CircleAvatar(
-                        backgroundColor: k.sudahInspeksi
-                            ? Colors.green.shade50
-                            : Colors.grey.shade100,
-                        child: Icon(
-                          k.sudahInspeksi ? Icons.check_circle : Icons.radio_button_unchecked,
-                          color: k.sudahInspeksi ? Colors.green : Colors.grey,
-                        ),
-                      ),
-                      title: Text(
-                        k.nama,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                      subtitle: Text(
-                        k.sudahInspeksi ? 'Sudah Diinspeksi' : 'Belum Diinspeksi',
-                        style: TextStyle(
-                          color: k.sudahInspeksi ? Colors.green : Colors.grey.shade600,
-                          fontSize: 13,
-                        ),
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () async {
-                        final res = await context.push(
-                          '/input-il1-kubikel',
-                          extra: {
-                            'garduIndukId': widget.garduIndukId,
-                            'garduIndukNama': widget.garduIndukNama,
-                            'penyulangId': k.id,
-                            'penyulangNama': k.nama,
-                          },
-                        );
-                        if (res == true) _fetch();
-                      },
-                    ),
-                  );
-                }),
               ],
-            );
-          }
-          return const SizedBox.shrink();
-        },
-      ),
+            ),
+            body: AppBackground(
+              child: Stack(
+                children: [
+                  if (state is OpgiIl1Loading && items.isEmpty)
+                    const Center(child: CircularProgressIndicator())
+                  else if (widget.garduIndukId == 0)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, size: 64, color: Colors.orange),
+                            const SizedBox(height: 16),
+                            const Text('Gardu Induk belum dipilih', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            const Text('Silakan kembali dan pilih Gardu Induk terlebih dahulu.', textAlign: TextAlign.center),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                              onPressed: () => context.pop(),
+                              child: const Text('Kembali'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else if (state is OpgiIl1Error && items.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                            const SizedBox(height: 16),
+                            Text(state.message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.red)),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Coba Lagi'),
+                              onPressed: () => _fetch(force: true),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else if (items.isEmpty)
+                    RefreshIndicator(
+                      onRefresh: () async => _fetch(force: true),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+                          Center(
+                            child: Column(
+                              children: [
+                                Icon(Icons.dns_outlined, size: 64, color: Colors.grey.shade400),
+                                const SizedBox(height: 12),
+                                const Text('Tidak ada data kubikel penyulang'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    RefreshIndicator(
+                      onRefresh: () async => _fetch(force: true),
+                      child: ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(16),
+                        itemCount: items.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          final hasLast = item.last != null;
+                          final statusStr = item.last?['status']?.toString();
+                          final dotColor = _getStatusColor(statusStr);
+                          final isDrafted = rawDrafts.any(
+                            (d) => d['nama'] == '${item.nama}-${widget.garduIndukNama}',
+                          );
+
+                          Color cardBg = Colors.white;
+                          if (item.isDisabled) {
+                            cardBg = Colors.grey.shade300;
+                          } else if (hasLast) {
+                            cardBg = const Color(0xFFDCFCE7); // light green
+                          }
+
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 4, right: 12),
+                                      width: 12,
+                                      height: 12,
+                                      decoration: BoxDecoration(
+                                        color: dotColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.nama,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            widget.garduIndukNama,
+                                            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (hasLast && statusStr != null)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: dotColor.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: dotColor.withValues(alpha: 0.4)),
+                                        ),
+                                        child: Text(
+                                          statusStr,
+                                          style: TextStyle(
+                                            color: dotColor,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      )
+                                    else if (isDrafted)
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: const BoxDecoration(
+                                              color: Colors.orange,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          const Text(
+                                            'Drafted',
+                                            style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                  ],
+                                ),
+                                if (!item.isDisabled) ...[
+                                  const SizedBox(height: 14),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: OutlinedButton(
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: AppColors.primary,
+                                            side: const BorderSide(color: AppColors.primary),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            padding: const EdgeInsets.symmetric(vertical: 10),
+                                          ),
+                                          onPressed: () => _navigateToDetail(item),
+                                          child: const Text('Lihat', style: TextStyle(fontWeight: FontWeight.w600)),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.primary,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            padding: const EdgeInsets.symmetric(vertical: 10),
+                                          ),
+                                          onPressed: hasLast ? null : () => _navigateToInput(item),
+                                          child: const Text('Input', style: TextStyle(fontWeight: FontWeight.w600)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  if (_isSavingBatch)
+                    Container(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CircularProgressIndicator(color: AppColors.primary),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Mengirim $_batchCompleted/$_batchTotal',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _batchTotal > 0 ? '${((_batchCompleted / _batchTotal) * 100).toInt()}%' : '0%',
+                                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

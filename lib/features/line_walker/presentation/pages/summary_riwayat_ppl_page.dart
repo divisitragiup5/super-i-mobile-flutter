@@ -26,6 +26,14 @@ class _SummaryRiwayatPPLPageState extends State<SummaryRiwayatPPLPage> {
         title: const Text('Riwayat PPL'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<PplCubit>().loadSummary();
+            },
+          ),
+        ],
       ),
       body: AppBackground(
         child: BlocBuilder<PplCubit, PplState>(
@@ -60,6 +68,7 @@ class _SummaryRiwayatPPLPageState extends State<SummaryRiwayatPPLPage> {
             return RefreshIndicator(
               onRefresh: () => context.read<PplCubit>().loadSummary(),
               child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 itemCount: items.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 16),

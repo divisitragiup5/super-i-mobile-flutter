@@ -7,7 +7,7 @@ import '../models/user_model.dart';
 
 abstract class AuthRemoteDataSource {
   /// Mengirim request login ke server, mengembalikan token JWT jika sukses.
-  Future<String> login({required String nip, required String password});
+  Future<Map<String, dynamic>> login({required String nip, required String password});
 
   /// Mengambil data profil user yang sedang login dari /data/user/me.
   Future<UserModel> getUserProfile();
@@ -19,19 +19,23 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   AuthRemoteDataSourceImpl(this.dioClient);
 
   @override
-  Future<String> login({required String nip, required String password}) async {
+  Future<Map<String, dynamic>> login({
+    required String nip,
+    required String password,
+  }) async {
     try {
       final response = await dioClient.dio.post(
         ApiConstants.login,
-        data: {'nip': nip, 'password': password},
+        data: {
+          'nip': nip,
+          'password': password,
+          'withRefreshToken': true, // <--- TAMBAHKAN INI
+        },
       );
 
       final data = response.data;
-      // Berdasarkan API super-i: response.data.data.access_token
-      if (data != null &&
-          data['data'] != null &&
-          data['data']['access_token'] != null) {
-        return data['data']['access_token'] as String;
+      if (data != null && data['data'] != null) {
+        return data['data'] as Map<String, dynamic>;
       }
 
       throw const ServerException(message: 'Format respon server tidak valid.');

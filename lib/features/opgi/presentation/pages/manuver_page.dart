@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/role_constants.dart';
+import '../../../../core/router/route_constants.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_background.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/empty_state_widget.dart';
+import '../../../../core/widgets/input_container.dart';
+import '../../../../core/widgets/loading_indicator.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
+import '../../data/models/opgi_manuver_model.dart';
 import '../cubit/opgi_manuver_cubit.dart';
+import '../widgets/manuver_item_card.dart';
 
 class ManuverPage extends StatefulWidget {
   final int garduIndukId;
@@ -19,161 +31,203 @@ class ManuverPage extends StatefulWidget {
 }
 
 class _ManuverPageState extends State<ManuverPage> {
+  int? _deletingId;
+
   @override
   void initState() {
     super.initState();
     _fetch();
   }
 
-  void _fetch() {
-    context.read<OpgiManuverCubit>().loadHistory(widget.garduIndukId);
+  void _fetch({bool forceRefresh = false}) {
+    context.read<OpgiManuverCubit>().loadManuverList(
+          widget.garduIndukId,
+          widget.garduIndukNama,
+          forceRefresh: forceRefresh,
+        );
+  }
+
+  void _navigateToInput() async {
+    final result = await context.push(
+      AppRoutes.inputManuver,
+      extra: {
+        'garduIndukId': widget.garduIndukId,
+        'garduIndukNama': widget.garduIndukNama,
+      },
+    );
+    if (result == true) {
+      _fetch();
+    } else {
+      // Re-fetch to update draft indicator if draft was saved/modified
+      _fetch();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Manuver - ${widget.garduIndukNama}'),
+        title: const Text('Kegiatan Manuver 20kV'),
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _fetch,
+            tooltip: 'Refresh',
+            onPressed: () => _fetch(forceRefresh: true),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Input Manuver'),
-        onPressed: () async {
-          final res = await context.push(
-            '/input-manuver',
-            extra: {
-              'garduIndukId': widget.garduIndukId,
-              'garduIndukNama': widget.garduIndukNama,
-            },
-          );
-          if (res == true) _fetch();
-        },
-      ),
-      body: BlocConsumer<OpgiManuverCubit, OpgiManuverState>(
-        listener: (context, state) {
-          if (state is OpgiManuverSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.green),
-            );
-            _fetch();
-          } else if (state is OpgiManuverError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is OpgiManuverLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is OpgiManuverLoaded) {
-            if (state.items.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.swap_calls_outlined, size: 64, color: Colors.grey.shade400),
-                    const SizedBox(height: 12),
-                    const Text('Belum ada riwayat manuver'),
-                  ],
+      body: AppBackground(
+        child: BlocConsumer<OpgiManuverCubit, OpgiManuverState>(
+          listener: (context, state) {
+            if (state is OpgiManuverSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: AppColors.primary,
+                ),
+              );
+            } else if (state is OpgiManuverError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: AppColors.danger,
                 ),
               );
             }
+          },
+          builder: (context, state) {
+            final authState = context.watch<AuthBloc>().state;
+            final isAdminSuper = authState is AuthAuthenticated &&
+                authState.user.roles.contains(AppRoles.adminSuper);
 
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.items.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final item = state.items[index];
-                return Card(
-                  elevation: 1,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
+            final cubit = context.read<OpgiManuverCubit>();
+            final List<ManuverItemModel> items = state is OpgiManuverLoaded
+                ? state.items
+                : (state is OpgiManuverSuccess && state.items != null)
+                    ? state.items!
+                    : (state is OpgiManuverError && state.items != null)
+                        ? state.items!
+                        : cubit.cachedItems;
+
+            final List<Map<String, dynamic>> drafts = state is OpgiManuverLoaded
+                ? state.drafts
+                : (state is OpgiManuverSuccess && state.drafts != null)
+                    ? state.drafts!
+                    : (state is OpgiManuverError && state.drafts != null)
+                        ? state.drafts!
+                        : cubit.cachedDrafts;
+
+            final hasDraft = drafts.isNotEmpty;
+            final isLoading = state is OpgiManuverLoading && items.isEmpty;
+
+            return RefreshIndicator(
+              onRefresh: () async => _fetch(forceRefresh: true),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Info Container Header
+                  InputContainer(
+                    label: 'INFO',
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              item.namaPeralatan,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        InputWithLabel(
+                          label: 'Gardu Induk',
+                          child: Text(
+                            widget.garduIndukNama,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1E293B),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: item.tindakan == 'TUTUP' || item.tindakan == 'MASUK'
-                                    ? Colors.green.shade50
-                                    : Colors.red.shade50,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: item.tindakan == 'TUTUP' || item.tindakan == 'MASUK'
-                                      ? Colors.green
-                                      : Colors.red,
-                                ),
-                              ),
-                              child: Text(
-                                item.tindakan,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                  color: item.tindakan == 'TUTUP' || item.tindakan == 'MASUK'
-                                      ? Colors.green
-                                      : Colors.red,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Waktu: ${item.waktuManuver}',
-                          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                        ),
-                        if (item.dispatcher != null)
-                          Text(
-                            'Dispatcher: ${item.dispatcher}',
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                           ),
-                        if (item.keterangan != null) ...[
-                          const SizedBox(height: 6),
-                          Text('Keterangan: ${item.keterangan}', style: const TextStyle(fontSize: 13)),
-                        ],
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                        ),
+                        const SizedBox(height: 12),
+                        Stack(
+                          alignment: Alignment.centerRight,
                           children: [
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                              onPressed: () {
-                                if (item.id != null) {
-                                  context.read<OpgiManuverCubit>().deleteManuver(item.id!, widget.garduIndukId);
-                                }
-                              },
+                            AppButton(
+                              text: 'Tambah Kegiatan Manuver',
+                              variant: ButtonVariant.outlined,
+                              height: 42,
+                              onPressed: _navigateToInput,
                             ),
+                            if (hasDraft)
+                              const Positioned(
+                                right: 12,
+                                child: Icon(
+                                  Icons.drafts,
+                                  color: Colors.red,
+                                  size: 20,
+                                ),
+                              ),
                           ],
                         ),
                       ],
                     ),
                   ),
-                );
-              },
+
+                  if (isLoading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: LoadingIndicator(text: 'Memuat data manuver...'),
+                    )
+                  else if (items.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: EmptyStateWidget(
+                        title: 'Belum Ada Kegiatan Manuver',
+                        description: 'Tekan tombol di atas untuk menambah kegiatan manuver baru.',
+                      ),
+                    )
+                  else ...[
+                    ...items.map((item) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: ManuverItemCard(
+                          item: item,
+                          isAdminSuper: isAdminSuper,
+                          isDeleting: _deletingId == item.id,
+                          onView: () async {
+                            await context.push(
+                              AppRoutes.dataManuver,
+                              extra: {
+                                'manuverId': item.id,
+                                'penyulangId': item.penyulang.id,
+                                'nama': item.penyulang.nama,
+                                'tipeManuver': item.tipeManuver,
+                                'garduInduk': {
+                                  'id': widget.garduIndukId,
+                                  'nama': widget.garduIndukNama,
+                                },
+                                'isClose': item.isClose.toString(),
+                              },
+                            );
+                            _fetch();
+                          },
+                          onDelete: () async {
+                            setState(() => _deletingId = item.id);
+                            await context.read<OpgiManuverCubit>().deleteManuver(
+                                  item.id,
+                                  widget.garduIndukId,
+                                  widget.garduIndukNama,
+                                );
+                            if (mounted) {
+                              setState(() => _deletingId = null);
+                            }
+                          },
+                        ),
+                      );
+                    }),
+                  ],
+                ],
+              ),
             );
-          }
-          return const SizedBox.shrink();
-        },
+          },
+        ),
       ),
     );
   }

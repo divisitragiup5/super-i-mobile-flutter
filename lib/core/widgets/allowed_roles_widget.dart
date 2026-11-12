@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
+import '../constants/role_constants.dart';
 
 /// Widget yang hanya menampilkan anaknya (child) jika user yang login memiliki salah satu role yang diizinkan.
 class AllowedRolesWidget extends StatelessWidget {
@@ -20,9 +21,10 @@ class AllowedRolesWidget extends StatelessWidget {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is AuthAuthenticated) {
-          final isAllowed = allowedRoles.any(
-            (role) => state.user.roles.contains(role),
-          );
+          final isAllowed = state.user.roles.contains(AppRoles.adminSuper) ||
+              allowedRoles.any(
+                (role) => state.user.roles.contains(role),
+              );
 
           if (isAllowed) return child;
         }

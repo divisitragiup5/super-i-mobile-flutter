@@ -354,6 +354,14 @@ class _RiwayatPPLListPageState extends State<RiwayatPPLListPage> {
         ),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<PplCubit>().loadHistoryByIdentifier(widget.identifier);
+            },
+          ),
+        ],
       ),
       body: AppBackground(
         child: BlocBuilder<PplCubit, PplState>(
@@ -380,6 +388,7 @@ class _RiwayatPPLListPageState extends State<RiwayatPPLListPage> {
               return RefreshIndicator(
                 onRefresh: () => context.read<PplCubit>().loadHistoryByIdentifier(widget.identifier),
                 child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length + (state.isLoadingMore ? 1 : 0),

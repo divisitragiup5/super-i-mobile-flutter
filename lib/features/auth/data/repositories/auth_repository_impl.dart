@@ -37,11 +37,19 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     try {
-      // 2. Tembak API login untuk mendapatkan access_token
-      final token = await remoteDataSource.login(nip: nip, password: password);
+      // 2. Tembak API login
+      final loginData = await remoteDataSource.login(
+        nip: nip,
+        password: password,
+      );
+      final accessToken = loginData['access_token']?.toString() ?? '';
+      final refreshToken = loginData['refresh_token']?.toString();
 
-      // 3. Simpan token ke brankas Keystore Android
-      await secureStorage.saveAccessToken(token);
+      // 3. Simpan access_token dan refresh_token
+      await secureStorage.saveAccessToken(accessToken);
+      if (refreshToken != null && refreshToken.isNotEmpty) {
+        await secureStorage.saveRefreshToken(refreshToken);
+      }
 
       // 4. Ambil profil lengkap petugas
       final userModel = await remoteDataSource.getUserProfile();
@@ -67,7 +75,9 @@ class AuthRepositoryImpl implements AuthRepository {
     final token = await secureStorage.getAccessToken();
     if (token == null || token.isEmpty) {
       await _clearSession();
-      return const Left(AuthFailure(message: 'Sesi belum ada atau telah berakhir.'));
+      return const Left(
+        AuthFailure(message: 'Sesi belum ada atau telah berakhir.'),
+      );
     }
 
     final isConnected = await networkInfo.isConnected;
@@ -99,7 +109,9 @@ class AuthRepositoryImpl implements AuthRepository {
         return Right(cached);
       }
       return const Left(
-        NetworkFailure(message: 'Tidak ada koneksi internet dan sesi lokal belum tersedia.'),
+        NetworkFailure(
+          message: 'Tidak ada koneksi internet dan sesi lokal belum tersedia.',
+        ),
       );
     }
   }
@@ -120,6 +132,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> _clearSession() async {
     try {
       await secureStorage.deleteAccessToken();
+      await secureStorage.deleteRefreshToken();
     } catch (_) {}
     try {
       await preferencesService.remove(StorageConstants.userProfile);

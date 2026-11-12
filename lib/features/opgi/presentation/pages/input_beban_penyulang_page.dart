@@ -1,18 +1,23 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/storage/local_database.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_background.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/field_pict_input.dart';
+import '../../../../core/widgets/input_container.dart';
 import '../cubit/opgi_realisasi_cubit.dart';
 
 class InputBebanPenyulangPage extends StatefulWidget {
-  final int garduIndukId;
-  final String garduIndukNama;
-  final String date;
+  final Map<String, dynamic> params;
 
   const InputBebanPenyulangPage({
     super.key,
-    required this.garduIndukId,
-    required this.garduIndukNama,
-    required this.date,
+    required this.params,
   });
 
   @override
@@ -20,284 +25,422 @@ class InputBebanPenyulangPage extends StatefulWidget {
 }
 
 class _InputBebanPenyulangPageState extends State<InputBebanPenyulangPage> {
-  final _formKey = GlobalKey<FormState>();
+  final _bebanController = TextEditingController();
+  File? _fotoFile;
+  int? _existingDraftId;
+  double _initialDurasi = 0.0;
+  late DateTime _startTime;
 
-  int _selectedPeriode = DateTime.now().hour;
-  final _penyulangIdController = TextEditingController(text: '1');
-  final _namaPenyulangController = TextEditingController(text: 'Penyulang 1');
-  final _arusRController = TextEditingController();
-  final _arusSController = TextEditingController();
-  final _arusTController = TextEditingController();
-  final _arusNController = TextEditingController();
-  final _dayaMwController = TextEditingController();
-  final _dayaMvarController = TextEditingController();
-  final _cosPhiController = TextEditingController();
+  // Extracted parameters
+  late int _penyulangId;
+  late String _penyulangNama;
+  late double _iMax;
+  late String _rel;
+  late String _garduIndukNama;
+  late int _garduIndukId;
+  Map<String, dynamic>? _lastBeban;
+  late Map<String, dynamic> _lastPeriode;
+  String? _scanValue;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTime = DateTime.now();
+
+    final p = widget.params;
+    _penyulangId = p['id'] is int ? p['id'] as int : int.tryParse('${p['id']}') ?? 0;
+    _penyulangNama = p['nama']?.toString() ?? '-';
+    _iMax = (p['iMax'] as num?)?.toDouble() ?? 0.0;
+    _rel = p['rel']?.toString() ?? '-';
+    _garduIndukNama = p['garduInduk']?.toString() ?? p['garduIndukNama']?.toString() ?? '-';
+    _garduIndukId = p['garduIndukId'] is int
+        ? p['garduIndukId'] as int
+        : int.tryParse('${p['garduIndukId']}') ?? 0;
+
+    _lastBeban = p['last'] is Map<String, dynamic> ? p['last'] as Map<String, dynamic> : null;
+    _lastPeriode = p['lastPeriode'] is Map<String, dynamic>
+        ? p['lastPeriode'] as Map<String, dynamic>
+        : {
+            'periode': DateTime.now().hour,
+            'tanggal': DateTime.now().day,
+            'bulan': DateTime.now().month,
+            'tahun': DateTime.now().year,
+          };
+    _scanValue = p['scanValue']?.toString();
+
+    _loadExistingDraft();
+  }
+
+  Future<void> _loadExistingDraft() async {
+    final periodeInt = _lastPeriode['periode'] is int
+        ? _lastPeriode['periode'] as int
+        : int.tryParse('${_lastPeriode['periode']}');
+
+    final drafts = await LocalDatabase.instance.getUnfinishedItemsGI(
+      nama: '$_penyulangNama-$_garduIndukNama',
+      periode: periodeInt,
+      type: 'beban-penyulang',
+    );
+
+    if (drafts.isNotEmpty && mounted) {
+      final draft = drafts.first;
+      _existingDraftId = draft['id'] is int ? draft['id'] as int : int.tryParse('${draft['id']}');
+
+      final data = draft['data'] is Map<String, dynamic>
+          ? draft['data'] as Map<String, dynamic>
+          : <String, dynamic>{};
+
+      if (data['beban'] != null) {
+        _bebanController.text = data['beban'].toString();
+      }
+
+      _initialDurasi = (data['durasi'] as num?)?.toDouble() ?? 0.0;
+
+      final fotoData = data['foto'];
+      final fotoUri = fotoData is Map ? fotoData['uri'] as String? : (fotoData is String ? fotoData : null);
+
+      if (fotoUri != null && _scanValue == null) {
+        final file = File(fotoUri);
+        if (file.existsSync()) {
+          setState(() {
+            _fotoFile = file;
+          });
+        }
+      }
+    }
+  }
 
   @override
   void dispose() {
-    _penyulangIdController.dispose();
-    _namaPenyulangController.dispose();
-    _arusRController.dispose();
-    _arusSController.dispose();
-    _arusTController.dispose();
-    _arusNController.dispose();
-    _dayaMwController.dispose();
-    _dayaMvarController.dispose();
-    _cosPhiController.dispose();
+    _bebanController.dispose();
     super.dispose();
   }
 
-  Map<String, dynamic> _buildPayload() {
-    return {
-      'penyulangId': int.tryParse(_penyulangIdController.text) ?? 1,
-      'namaPenyulang': _namaPenyulangController.text,
-      'periode': _selectedPeriode,
-      'arusR': double.tryParse(_arusRController.text) ?? 0.0,
-      'arusS': double.tryParse(_arusSController.text) ?? 0.0,
-      'arusT': double.tryParse(_arusTController.text) ?? 0.0,
-      'arusN': double.tryParse(_arusNController.text) ?? 0.0,
-      if (_dayaMwController.text.isNotEmpty)
-        'dayaMw': double.tryParse(_dayaMwController.text),
-      if (_dayaMvarController.text.isNotEmpty)
-        'dayaMvar': double.tryParse(_dayaMvarController.text),
-      if (_cosPhiController.text.isNotEmpty)
-        'cosPhi': double.tryParse(_cosPhiController.text),
-      'date': widget.date,
-      'garduIndukId': widget.garduIndukId,
+  bool _isValidDecimal(String text) {
+    if (text.contains(',')) return false;
+    return double.tryParse(text) != null;
+  }
+
+  double _calculateTotalDuration() {
+    final diffMinutes = DateTime.now().difference(_startTime).inMilliseconds / 1000 / 60;
+    return _initialDurasi + diffMinutes;
+  }
+
+  Future<void> _saveAsDraft() async {
+    final rawText = _bebanController.text.trim();
+    if (rawText.isNotEmpty && !_isValidDecimal(rawText)) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Peringatan'),
+          content: const Text('Gunakan titik ( . ) sebagai pemisah nilai desimal'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Tutup'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    try {
+      final periodeInt = _lastPeriode['periode'] is int
+          ? _lastPeriode['periode'] as int
+          : int.tryParse('${_lastPeriode['periode']}') ?? 0;
+      final tanggalInt = _lastPeriode['tanggal'] is int
+          ? _lastPeriode['tanggal'] as int
+          : int.tryParse('${_lastPeriode['tanggal']}') ?? DateTime.now().day;
+      final bulanInt = _lastPeriode['bulan'] is int
+          ? _lastPeriode['bulan'] as int
+          : int.tryParse('${_lastPeriode['bulan']}') ?? DateTime.now().month;
+      final tahunInt = _lastPeriode['tahun'] is int
+          ? _lastPeriode['tahun'] as int
+          : int.tryParse('${_lastPeriode['tahun']}') ?? DateTime.now().year;
+
+      final draftData = {
+        'id': _penyulangId,
+        'garduIndukId': _garduIndukId,
+        'periode': periodeInt,
+        'tanggal': tanggalInt,
+        'bulan': bulanInt,
+        'tahun': tahunInt,
+        'beban': rawText.isNotEmpty ? rawText : null,
+        'foto': _fotoFile != null
+            ? {
+                'uri': _fotoFile!.path,
+                'date': DateTime.now().toIso8601String(),
+              }
+            : null,
+        'durasi': _calculateTotalDuration(),
+        'startTime': _startTime.toIso8601String(),
+      };
+
+      await LocalDatabase.instance.insertUnfinishedItemGI({
+        'nama': '$_penyulangNama-$_garduIndukNama',
+        'date': DateFormat('dd-MMMM-yyyy').format(DateTime.now()),
+        'type': 'beban-penyulang',
+        'periode': periodeInt,
+        'data': draftData,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Simpan draft berhasil!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pop(true);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Terdapat kesalahan saat menyimpan draft!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _onSubmit() {
+    final rawText = _bebanController.text.trim();
+    if (_fotoFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto wajib diambil'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    if (rawText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nilai beban wajib diisi'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    if (!_isValidDecimal(rawText)) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Peringatan'),
+          content: const Text('Gunakan titik ( . ) sebagai pemisah nilai desimal'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Tutup'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final double bebanValue = double.parse(rawText);
+
+    // Validasi 1: Melebihi iMax
+    if (bebanValue > _iMax && _iMax > 0) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Peringatan'),
+          content: const Text('Beban melebihi iMax, yakin menyimpannya?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              onPressed: () {
+                Navigator.pop(ctx);
+                _sendPayload(bebanValue);
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Validasi 2: Beban >= 2x beban sebelumnya
+    final lastBebanVal = (_lastBeban?['beban'] as num?)?.toDouble();
+    if (lastBebanVal != null && lastBebanVal > 0 && bebanValue >= lastBebanVal * 2) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Peringatan'),
+          content: const Text('Beban lebih atau sama dengan dua kali beban sebelumnya, yakin menyimpannya?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              onPressed: () {
+                Navigator.pop(ctx);
+                _sendPayload(bebanValue);
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    _sendPayload(bebanValue);
+  }
+
+  void _sendPayload(double bebanValue) {
+    final periodeInt = _lastPeriode['periode'] is int
+        ? _lastPeriode['periode'] as int
+        : int.tryParse('${_lastPeriode['periode']}') ?? 0;
+    final tanggalInt = _lastPeriode['tanggal'] is int
+        ? _lastPeriode['tanggal'] as int
+        : int.tryParse('${_lastPeriode['tanggal']}') ?? DateTime.now().day;
+    final bulanInt = _lastPeriode['bulan'] is int
+        ? _lastPeriode['bulan'] as int
+        : int.tryParse('${_lastPeriode['bulan']}') ?? DateTime.now().month;
+    final tahunInt = _lastPeriode['tahun'] is int
+        ? _lastPeriode['tahun'] as int
+        : int.tryParse('${_lastPeriode['tahun']}') ?? DateTime.now().year;
+
+    final payload = {
+      'penyulangId': _penyulangId,
+      'beban': bebanValue.round(),
+      'periode': periodeInt,
+      'tanggal': tanggalInt,
+      'bulan': bulanInt,
+      'tahun': tahunInt,
+      'durasi': _calculateTotalDuration(),
+      'timezone': 'Asia/Jakarta',
+      'garduIndukId': _garduIndukId,
     };
+
+    context.read<OpgiRealisasiCubit>().submitBebanPenyulangSingle(
+          file: _fotoFile!,
+          data: payload,
+          draftId: _existingDraftId,
+        );
   }
 
   @override
   Widget build(BuildContext context) {
+    final periodeInt = _lastPeriode['periode'] is int
+        ? _lastPeriode['periode'] as int
+        : int.tryParse('${_lastPeriode['periode']}') ?? 0;
+    final periodeStr = periodeInt.toString().padLeft(2, '0');
+
+    final lastBebanPeriode = _lastBeban?['periode'] != null
+        ? _lastBeban!['periode'].toString().padLeft(2, '0')
+        : '-';
+    final lastBebanVal = _lastBeban?['beban'] != null ? '${_lastBeban!['beban']}' : '-';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Input Beban Penyulang'),
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.save_outlined),
+            tooltip: 'Simpan Draft',
+            onPressed: _saveAsDraft,
+          ),
+        ],
       ),
-      body: BlocListener<OpgiRealisasiCubit, OpgiRealisasiState>(
-        listener: (context, state) {
-          if (state is OpgiRealisasiSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.green),
-            );
-            Navigator.of(context).pop(true);
-          } else if (state is OpgiRealisasiError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
-            );
-          }
-        },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Form(
-            key: _formKey,
+      body: AppBackground(
+        child: BlocListener<OpgiRealisasiCubit, OpgiRealisasiState>(
+          listener: (context, state) {
+            if (state is OpgiRealisasiSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message), backgroundColor: Colors.green),
+              );
+              Navigator.of(context).pop(true);
+            } else if (state is OpgiRealisasiError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              );
+            }
+          },
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Periode
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Jam / Periode (WIB)', style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<int>(
-                          initialValue: _selectedPeriode,
-                          decoration: const InputDecoration(border: OutlineInputBorder()),
-                          items: List.generate(24, (i) {
-                            return DropdownMenuItem(
-                              value: i,
-                              child: Text('Pukul ${i.toString().padLeft(2, '0')}:00 WIB'),
-                            );
-                          }),
-                          onChanged: (val) {
-                            if (val != null) setState(() => _selectedPeriode = val);
-                          },
-                        ),
-                      ],
-                    ),
+                // Card 1: INFO
+                InputContainer(
+                  label: 'INFO',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      InputWithLabel(
+                        label: 'Gardu Induk',
+                        child: Text(_garduIndukNama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      ),
+                      InputWithLabel(
+                        label: 'Rel',
+                        child: Text(_rel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      ),
+                      InputWithLabel(
+                        label: 'IMax',
+                        child: Text('$_iMax', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      ),
+                      InputWithLabel(
+                        label: 'Periode Terakhir',
+                        child: Text(lastBebanPeriode, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      ),
+                      InputWithLabel(
+                        label: 'Beban Terakhir',
+                        margin: EdgeInsets.zero,
+                        child: Text(lastBebanVal, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
 
-                // Penyulang info
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Informasi Penyulang', style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _namaPenyulangController,
-                          decoration: const InputDecoration(
-                            labelText: 'Nama Penyulang *',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _penyulangIdController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'ID Penyulang *',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Arus
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Arus (Ampere)', style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _arusRController,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                decoration: const InputDecoration(labelText: 'Arus R *', suffixText: 'A', border: OutlineInputBorder()),
-                                validator: (v) => v == null || v.isEmpty ? 'Wajib' : null,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _arusSController,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                decoration: const InputDecoration(labelText: 'Arus S *', suffixText: 'A', border: OutlineInputBorder()),
-                                validator: (v) => v == null || v.isEmpty ? 'Wajib' : null,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _arusTController,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                decoration: const InputDecoration(labelText: 'Arus T *', suffixText: 'A', border: OutlineInputBorder()),
-                                validator: (v) => v == null || v.isEmpty ? 'Wajib' : null,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _arusNController,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                decoration: const InputDecoration(labelText: 'Arus N *', suffixText: 'A', border: OutlineInputBorder()),
-                                validator: (v) => v == null || v.isEmpty ? 'Wajib' : null,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Daya
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Daya & Cos Phi (Opsional)', style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _dayaMwController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(labelText: 'Daya (MW)', suffixText: 'MW', border: OutlineInputBorder()),
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _dayaMvarController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(labelText: 'Daya (MVAR)', suffixText: 'MVAR', border: OutlineInputBorder()),
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _cosPhiController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(labelText: 'Cos Phi', border: OutlineInputBorder()),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.save_outlined),
-                        label: const Text('Simpan Draft'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        onPressed: () async {
-                          if (_formKey.currentState?.validate() ?? false) {
-                            final data = _buildPayload();
-                            await context.read<OpgiRealisasiCubit>().saveDraft(
-                              type: 'beban-penyulang',
-                              nama: '${_namaPenyulangController.text} - ${widget.garduIndukNama}',
-                              date: widget.date,
-                              periode: _selectedPeriode,
-                              data: data,
-                            );
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Draft berhasil disimpan offline')),
-                              );
-                              Navigator.of(context).pop(true);
-                            }
-                          }
+                // Card 2: INPUT BEBAN
+                InputContainer(
+                  label: 'INPUT BEBAN',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      InputWithLabel(
+                        label: 'Periode',
+                        child: Text(periodeStr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      ),
+                      FieldPictInput(
+                        label: 'Foto',
+                        placeholder: 'Ambil Foto',
+                        pictureFile: _fotoFile,
+                        isRequired: true,
+                        onChange: (file) => setState(() => _fotoFile = file),
+                      ),
+                      const SizedBox(height: 14),
+                      AppTextField(
+                        label: 'Beban',
+                        hint: 'Tulis beban',
+                        controller: _bebanController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      ),
+                      const SizedBox(height: 20),
+                      BlocBuilder<OpgiRealisasiCubit, OpgiRealisasiState>(
+                        builder: (context, state) {
+                          return AppButton(
+                            text: 'Simpan',
+                            isLoading: state is OpgiRealisasiLoading,
+                            onPressed: _onSubmit,
+                          );
                         },
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.send),
-                        label: const Text('Kirim ke Server'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        onPressed: () {
-                          if (_formKey.currentState?.validate() ?? false) {
-                            final data = _buildPayload();
-                            context.read<OpgiRealisasiCubit>().submitBebanPenyulang(
-                              widget.garduIndukId,
-                              [data],
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),

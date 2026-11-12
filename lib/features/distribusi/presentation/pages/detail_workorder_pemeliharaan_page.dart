@@ -34,6 +34,14 @@ class _DetailWorkorderPemeliharaanPageState
         title: Text('Detail WO #${widget.workOrderId}'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<WoPemeliharaanCubit>().fetchDetail(widget.workOrderId);
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -45,32 +53,49 @@ class _DetailWorkorderPemeliharaanPageState
                   Container(color: AppColors.backgroundLight),
             ),
           ),
-          BlocBuilder<WoPemeliharaanCubit, WoPemeliharaanState>(
-            builder: (context, state) {
-              if (state is WoPemeliharaanLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          RefreshIndicator(
+            onRefresh: () async {
+              await context.read<WoPemeliharaanCubit>().fetchDetail(widget.workOrderId);
+            },
+            child: BlocBuilder<WoPemeliharaanCubit, WoPemeliharaanState>(
+              builder: (context, state) {
+                if (state is WoPemeliharaanLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-              if (state is WoPemeliharaanError) {
-                return Center(
-                  child: Text(state.message,
-                      style: const TextStyle(color: Colors.white)),
-                );
-              }
+                if (state is WoPemeliharaanError) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                      Center(
+                        child: Text(state.message,
+                            style: const TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  );
+                }
 
-              final wo = state is WoPemeliharaanLoaded
-                  ? state.detailWorkOrder
-                  : null;
+                final wo = state is WoPemeliharaanLoaded
+                    ? state.detailWorkOrder
+                    : null;
 
-              if (wo == null) {
-                return const Center(
-                  child: Text('Data tidak ditemukan',
-                      style: TextStyle(color: Colors.white)),
-                );
-              }
+                if (wo == null) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                      const Center(
+                        child: Text('Data tidak ditemukan',
+                            style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  );
+                }
 
-              return ListView(
-                padding: const EdgeInsets.all(16),
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
                 children: [
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -144,8 +169,9 @@ class _DetailWorkorderPemeliharaanPageState
               );
             },
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 }

@@ -364,6 +364,14 @@ class _RiwayatKegiatanSosialListPageState extends State<RiwayatKegiatanSosialLis
         ),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<KegiatanSosialCubit>().loadHistoryByIdentifier(widget.identifier);
+            },
+          ),
+        ],
       ),
       body: AppBackground(
         child: BlocBuilder<KegiatanSosialCubit, KegiatanSosialState>(
@@ -390,6 +398,7 @@ class _RiwayatKegiatanSosialListPageState extends State<RiwayatKegiatanSosialLis
               return RefreshIndicator(
                 onRefresh: () => context.read<KegiatanSosialCubit>().loadHistoryByIdentifier(widget.identifier),
                 child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length + (state.isLoadingMore ? 1 : 0),

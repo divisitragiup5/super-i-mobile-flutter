@@ -7,24 +7,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../data/models/history_penilaian_model.dart';
 import '../cubit/history_penilaian_cubit.dart';
 import '../cubit/history_penilaian_state.dart';
+import '../widgets/penilaian_header_card.dart';
 
 class DetailHistoryPenilaianPage extends StatelessWidget {
   final NilaiBulananItemModel item;
 
   const DetailHistoryPenilaianPage({super.key, required this.item});
-
-  Color _getStatusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'AMAN':
-        return AppColors.success;
-      case 'SURAT TEGURAN':
-        return Colors.orange.shade700;
-      case 'SURAT PERINGATAN':
-        return AppColors.danger;
-      default:
-        return AppColors.textPrimary;
-    }
-  }
 
   void _showComponentSheet(BuildContext context, NilaiHarianItemModel harian) {
     showModalBottomSheet(
@@ -157,6 +145,19 @@ class DetailHistoryPenilaianPage extends StatelessWidget {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
+          actions: [
+            Builder(
+              builder: (ctx) => IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  ctx.read<DetailHistoryPenilaianCubit>().fetchDetail(
+                        bulan: item.bulan,
+                        tahun: item.tahun,
+                      );
+                },
+              ),
+            ),
+          ],
         ),
         body: Stack(
           children: [
@@ -218,7 +219,10 @@ class DetailHistoryPenilaianPage extends StatelessWidget {
                       separatorBuilder: (context, index) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         if (index == 0) {
-                          return _buildHeaderGauges(context, state.grafik ?? _fallbackGrafik(item));
+                          return PenilaianHeaderCard(
+                            grafik: state.grafik ?? _fallbackGrafik(item),
+                            bulanFallback: item.bulan,
+                          );
                         }
 
                         final harian = state.harianItems[index - 1];
@@ -246,123 +250,6 @@ class DetailHistoryPenilaianPage extends StatelessWidget {
       perTanggal: item.perTanggal,
       bulanString: '',
       tahun: item.tahun,
-    );
-  }
-
-  Widget _buildHeaderGauges(BuildContext context, GrafikBulananModel grafik) {
-    final statusColor = _getStatusColor(grafik.status);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Per Tanggal: ${grafik.perTanggal}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  grafik.status,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: statusColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-
-          // Three circular gauges
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildCircularMetric(
-                'Point Absensi',
-                grafik.pointAbsensi,
-                Colors.amber.shade600,
-              ),
-              _buildCircularMetric(
-                'Point Performa',
-                grafik.pointPerforma,
-                Colors.blue.shade600,
-              ),
-              _buildCircularMetric(
-                'Nilai Kinerja',
-                grafik.nilaiKinerja,
-                AppColors.primary,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCircularMetric(String label, double value, Color color) {
-    final clamped = (value / 100.0).clamp(0.0, 1.0);
-
-    return Column(
-      children: [
-        SizedBox(
-          width: 76,
-          height: 76,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              CircularProgressIndicator(
-                value: clamped,
-                strokeWidth: 6,
-                backgroundColor: color.withValues(alpha: 0.15),
-                valueColor: AlwaysStoppedAnimation<Color>(color),
-              ),
-              Text(
-                value.toStringAsFixed(1),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
     );
   }
 

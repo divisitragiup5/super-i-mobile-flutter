@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -90,25 +91,42 @@ import '../../features/opgi/presentation/pages/gardu_induk_hub_page.dart';
 import '../../features/opgi/presentation/pages/input_realisasi_hub_page.dart';
 import '../../features/opgi/presentation/pages/beban_trafo_page.dart';
 import '../../features/opgi/presentation/pages/input_beban_trafo_page.dart';
+import '../../features/opgi/presentation/pages/data_beban_trafo_page.dart';
+import '../../features/opgi/presentation/pages/update_beban_trafo_page.dart';
 import '../../features/opgi/presentation/pages/beban_penyulang_page.dart';
+import '../../features/opgi/presentation/pages/data_beban_penyulang_page.dart';
 import '../../features/opgi/presentation/pages/input_beban_penyulang_page.dart';
+import '../../features/opgi/presentation/pages/update_beban_penyulang_page.dart';
 import '../../features/opgi/presentation/pages/update_urutan_penyulang_page.dart';
 import '../../features/opgi/presentation/pages/kwh_harian_page.dart';
 import '../../features/opgi/presentation/pages/input_kwh_harian_page.dart';
+import '../../features/opgi/presentation/pages/data_kwh_harian_page.dart';
+import '../../features/opgi/presentation/pages/update_kwh_harian_page.dart';
 import '../../features/opgi/presentation/pages/tegangan_trafo_page.dart';
 import '../../features/opgi/presentation/pages/input_tegangan_trafo_page.dart';
+import '../../features/opgi/presentation/pages/data_tegangan_trafo_page.dart';
+import '../../features/opgi/presentation/pages/update_tegangan_trafo_page.dart';
 import '../../features/opgi/presentation/pages/manuver_page.dart';
+import '../../features/opgi/presentation/pages/data_manuver_page.dart';
 import '../../features/opgi/presentation/pages/input_manuver_page.dart';
+import '../../features/opgi/presentation/pages/input_manuver_progress_page.dart';
+import '../../features/opgi/presentation/pages/update_manuver_progress_page.dart';
 import '../../features/opgi/presentation/pages/anomali_gi_page.dart';
 import '../../features/opgi/presentation/pages/input_anomali_gi_page.dart';
 import '../../features/opgi/presentation/pages/input_kondisi_anomali_gi_page.dart';
 import '../../features/opgi/presentation/pages/il1_hub_page.dart';
 import '../../features/opgi/presentation/pages/il1_kubikel_page.dart';
+import '../../features/opgi/presentation/pages/data_il1_kubikel_page.dart';
 import '../../features/opgi/presentation/pages/input_il1_kubikel_page.dart';
+import '../../features/opgi/presentation/pages/update_il1_kubikel_page.dart';
 import '../../features/opgi/presentation/pages/il1_trafo_ps_page.dart';
+import '../../features/opgi/presentation/pages/data_il1_trafo_ps_page.dart';
 import '../../features/opgi/presentation/pages/input_il1_trafo_ps_page.dart';
+import '../../features/opgi/presentation/pages/update_il1_trafo_ps_page.dart';
 import '../../features/opgi/presentation/pages/il1_sipil_page.dart';
+import '../../features/opgi/presentation/pages/data_il1_sipil_page.dart';
 import '../../features/opgi/presentation/pages/input_il1_sipil_page.dart';
+import '../../features/opgi/presentation/pages/update_il1_sipil_page.dart';
 
 import 'route_constants.dart';
 
@@ -126,6 +144,78 @@ class GoRouterRefreshStream extends ChangeNotifier {
     _subscription.cancel();
     super.dispose();
   }
+}
+
+Map<String, dynamic> _extractExtra(GoRouterState state) {
+  final Map<String, dynamic> result = {};
+  result.addAll(state.uri.queryParameters);
+  final extra = state.extra;
+  if (extra is Map<String, dynamic>) {
+    result.addAll(extra);
+    return result;
+  }
+  if (extra is Map) {
+    result.addAll(extra.map((k, v) => MapEntry(k.toString(), v)));
+    return result;
+  }
+  if (extra is String && extra.trim().startsWith('{')) {
+    try {
+      final decoded = jsonDecode(extra);
+      if (decoded is Map) {
+        result.addAll(decoded.map((k, v) => MapEntry(k.toString(), v)));
+        return result;
+      }
+    } catch (_) {}
+  }
+  return result;
+}
+
+int _safeInt(dynamic value, [int defaultValue = 0]) {
+  if (value == null) return defaultValue;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString()) ?? defaultValue;
+}
+
+({int id, String nama, String? scanValue}) _parseGarduIndukFromState(GoRouterState state) {
+  final extra = _extractExtra(state);
+  final qParams = state.uri.queryParameters;
+
+  // 1. Resolve rawId
+  dynamic rawId = extra['garduIndukId'] ?? qParams['garduIndukId'] ?? qParams['id'];
+  if (rawId == null && extra['garduInduk'] != null) {
+    final gi = extra['garduInduk'];
+    if (gi is Map) {
+      rawId = gi['id'];
+    } else if (gi is num || (gi is String && int.tryParse(gi) != null)) {
+      rawId = gi;
+    }
+  }
+  if (rawId == null && qParams['garduInduk'] != null) {
+    final gi = qParams['garduInduk']!;
+    if (int.tryParse(gi) != null) {
+      rawId = gi;
+    }
+  }
+  final int id = _safeInt(rawId, 0);
+
+  // 2. Resolve rawNama
+  dynamic rawNama = extra['garduIndukNama'] ?? qParams['garduIndukNama'] ?? qParams['nama'];
+  if (rawNama == null && extra['garduInduk'] is Map) {
+    rawNama = (extra['garduInduk'] as Map)['nama'];
+  }
+  String nama = '-';
+  if (rawNama != null && rawNama.toString().trim().isNotEmpty) {
+    nama = rawNama.toString().trim();
+  }
+
+  // 3. Resolve scanValue
+  dynamic rawScan = extra['scanValue'] ?? qParams['scanValue'];
+  String? scanValue;
+  if (rawScan != null && rawScan.toString().trim().isNotEmpty) {
+    scanValue = rawScan.toString().trim();
+  }
+
+  return (id: id, nama: nama, scanValue: scanValue);
 }
 
 class AppRouter {
@@ -634,22 +724,23 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.inputRealisasi,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final gi = _parseGarduIndukFromState(state);
           return InputRealisasiHubPage(
-            garduIndukId: extra['garduIndukId'] as int? ?? (extra['garduInduk'] as Map?)?['id'] as int? ?? 0,
-            garduIndukNama: extra['garduIndukNama'] as String? ?? (extra['garduInduk'] as Map?)?['nama'] as String? ?? '-',
+            garduIndukId: gi.id,
+            garduIndukNama: gi.nama,
           );
         },
       ),
       GoRoute(
         path: AppRoutes.bebanTrafo,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final gi = _parseGarduIndukFromState(state);
           return BlocProvider<OpgiRealisasiCubit>(
             create: (_) => sl<OpgiRealisasiCubit>(),
             child: BebanTrafoPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
+              garduIndukId: gi.id,
+              garduIndukNama: gi.nama,
+              scanValue: gi.scanValue,
             ),
           );
         },
@@ -657,13 +748,35 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.inputBebanTrafo,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final extra = _extractExtra(state);
           return BlocProvider<OpgiRealisasiCubit>(
             create: (_) => sl<OpgiRealisasiCubit>(),
             child: InputBebanTrafoPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
-              date: extra['date'] as String? ?? '',
+              params: extra,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.dataBebanTrafo,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiRealisasiCubit>(
+            create: (_) => sl<OpgiRealisasiCubit>(),
+            child: DataBebanTrafoPage(
+              params: extra,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.updateBebanTrafo,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiRealisasiCubit>(
+            create: (_) => sl<OpgiRealisasiCubit>(),
+            child: UpdateBebanTrafoPage(
+              params: extra,
             ),
           );
         },
@@ -671,12 +784,13 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.bebanPenyulang,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final gi = _parseGarduIndukFromState(state);
           return BlocProvider<OpgiRealisasiCubit>(
             create: (_) => sl<OpgiRealisasiCubit>(),
             child: BebanPenyulangPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
+              garduIndukId: gi.id,
+              garduIndukNama: gi.nama,
+              scanValue: gi.scanValue,
             ),
           );
         },
@@ -684,13 +798,35 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.inputBebanPenyulang,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final extra = _extractExtra(state);
           return BlocProvider<OpgiRealisasiCubit>(
             create: (_) => sl<OpgiRealisasiCubit>(),
             child: InputBebanPenyulangPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
-              date: extra['date'] as String? ?? '',
+              params: extra,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.dataBebanPenyulang,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiRealisasiCubit>(
+            create: (_) => sl<OpgiRealisasiCubit>(),
+            child: DataBebanPenyulangPage(
+              params: extra,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.updateBebanPenyulang,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiRealisasiCubit>(
+            create: (_) => sl<OpgiRealisasiCubit>(),
+            child: UpdateBebanPenyulangPage(
+              params: extra,
             ),
           );
         },
@@ -698,12 +834,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.updateUrutanPenyulang,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final gi = _parseGarduIndukFromState(state);
           return BlocProvider<OpgiRealisasiCubit>(
             create: (_) => sl<OpgiRealisasiCubit>(),
             child: UpdateUrutanPenyulangPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
+              garduIndukId: gi.id,
+              garduIndukNama: gi.nama,
             ),
           );
         },
@@ -711,12 +847,13 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.kwhHarian,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final gi = _parseGarduIndukFromState(state);
           return BlocProvider<OpgiRealisasiCubit>(
             create: (_) => sl<OpgiRealisasiCubit>(),
             child: KwhHarianPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
+              garduIndukId: gi.id,
+              garduIndukNama: gi.nama,
+              scanValue: gi.scanValue,
             ),
           );
         },
@@ -724,13 +861,35 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.inputKwhHarian,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final extra = _extractExtra(state);
           return BlocProvider<OpgiRealisasiCubit>(
             create: (_) => sl<OpgiRealisasiCubit>(),
             child: InputKwhHarianPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
-              date: extra['date'] as String? ?? '',
+              params: extra,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.dataKwhHarian,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiRealisasiCubit>(
+            create: (_) => sl<OpgiRealisasiCubit>(),
+            child: DataKwhHarianPage(
+              params: extra,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.updateKwhHarian,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiRealisasiCubit>(
+            create: (_) => sl<OpgiRealisasiCubit>(),
+            child: UpdateKwhHarianPage(
+              params: extra,
             ),
           );
         },
@@ -738,12 +897,13 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.teganganTrafo,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final gi = _parseGarduIndukFromState(state);
           return BlocProvider<OpgiRealisasiCubit>(
             create: (_) => sl<OpgiRealisasiCubit>(),
             child: TeganganTrafoPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
+              garduIndukId: gi.id,
+              garduIndukNama: gi.nama,
+              scanValue: gi.scanValue,
             ),
           );
         },
@@ -751,13 +911,35 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.inputTeganganTrafo,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final extra = _extractExtra(state);
           return BlocProvider<OpgiRealisasiCubit>(
             create: (_) => sl<OpgiRealisasiCubit>(),
             child: InputTeganganTrafoPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
-              date: extra['date'] as String? ?? '',
+              params: extra,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.dataTeganganTrafo,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiRealisasiCubit>(
+            create: (_) => sl<OpgiRealisasiCubit>(),
+            child: DataTeganganTrafoPage(
+              params: extra,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.updateTeganganTrafo,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiRealisasiCubit>(
+            create: (_) => sl<OpgiRealisasiCubit>(),
+            child: UpdateTeganganTrafoPage(
+              params: extra,
             ),
           );
         },
@@ -765,12 +947,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.manuver,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final gi = _parseGarduIndukFromState(state);
           return BlocProvider<OpgiManuverCubit>(
             create: (_) => sl<OpgiManuverCubit>(),
             child: ManuverPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? (extra['garduInduk'] as Map?)?['id'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? (extra['garduInduk'] as Map?)?['nama'] as String? ?? '-',
+              garduIndukId: gi.id,
+              garduIndukNama: gi.nama,
             ),
           );
         },
@@ -778,12 +960,86 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.inputManuver,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final gi = _parseGarduIndukFromState(state);
           return BlocProvider<OpgiManuverCubit>(
             create: (_) => sl<OpgiManuverCubit>(),
             child: InputManuverPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
+              garduIndukId: gi.id,
+              garduIndukNama: gi.nama,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.dataManuver,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          final giMap = extra['garduInduk'] is Map ? extra['garduInduk'] as Map : null;
+          final garduIndukId = _safeInt(extra['garduIndukId'] ?? giMap?['id']);
+          final garduIndukNama = (extra['garduIndukNama'] ?? giMap?['nama'])?.toString() ?? '-';
+          final isCloseStr = extra['isClose']?.toString().toLowerCase();
+          final isClose = isCloseStr == 'true' || isCloseStr == '1';
+
+          return BlocProvider<OpgiManuverCubit>(
+            create: (_) => sl<OpgiManuverCubit>(),
+            child: DataManuverPage(
+              manuverId: _safeInt(extra['manuverId']),
+              penyulangId: _safeInt(extra['penyulangId']),
+              penyulangNama: extra['nama']?.toString() ?? extra['penyulangNama']?.toString() ?? '-',
+              tipeManuver: extra['tipeManuver']?.toString() ?? '-',
+              garduIndukId: garduIndukId,
+              garduIndukNama: garduIndukNama,
+              isClose: isClose,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.inputManuverProgress,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          final giMap = extra['garduInduk'] is Map ? extra['garduInduk'] as Map : null;
+          final garduIndukId = _safeInt(extra['garduIndukId'] ?? giMap?['id']);
+          final garduIndukNama = (extra['garduInduk'] is String ? extra['garduInduk'] : (extra['garduIndukNama'] ?? giMap?['nama']))?.toString() ?? '-';
+
+          return BlocProvider<OpgiManuverCubit>(
+            create: (_) => sl<OpgiManuverCubit>(),
+            child: InputManuverProgressPage(
+              garduInduk: garduIndukNama,
+              garduIndukId: garduIndukId,
+              manuverId: _safeInt(extra['manuverId']),
+              nama: extra['nama']?.toString() ?? extra['penyulangNama']?.toString() ?? '-',
+              tipeManuver: extra['tipeManuver']?.toString() ?? '-',
+              penyulangId: _safeInt(extra['penyulangId']),
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.updateManuverProgress,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          final giMap = extra['garduInduk'] is Map ? extra['garduInduk'] as Map : null;
+          final garduIndukId = _safeInt(extra['garduIndukId'] ?? giMap?['id']);
+          final garduIndukNama = (extra['garduInduk'] is String ? extra['garduInduk'] : (extra['garduIndukNama'] ?? giMap?['nama']))?.toString() ?? '-';
+          final isLastProgressStr = extra['isLastProgress']?.toString().toLowerCase();
+          final isLastProgress = isLastProgressStr == 'true' || isLastProgressStr == '1';
+
+          final currentData = extra['data'] is Map<String, dynamic>
+              ? extra['data'] as Map<String, dynamic>
+              : (extra['data'] is Map ? Map<String, dynamic>.from(extra['data'] as Map) : <String, dynamic>{});
+
+          return BlocProvider<OpgiManuverCubit>(
+            create: (_) => sl<OpgiManuverCubit>(),
+            child: UpdateManuverProgressPage(
+              garduInduk: garduIndukNama,
+              garduIndukId: garduIndukId,
+              manuverId: _safeInt(extra['manuverId']),
+              nama: extra['nama']?.toString() ?? extra['penyulangNama']?.toString() ?? '-',
+              tipeManuver: extra['tipeManuver']?.toString() ?? '-',
+              penyulangId: _safeInt(extra['penyulangId']),
+              currentData: currentData,
+              isLastProgress: isLastProgress,
             ),
           );
         },
@@ -791,12 +1047,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.anomaliGi,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final gi = _parseGarduIndukFromState(state);
           return BlocProvider<OpgiAnomaliCubit>(
             create: (_) => sl<OpgiAnomaliCubit>(),
             child: AnomaliGiPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? (extra['garduInduk'] as Map?)?['id'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? (extra['garduInduk'] as Map?)?['nama'] as String? ?? '-',
+              garduIndukId: gi.id,
+              garduIndukNama: gi.nama,
             ),
           );
         },
@@ -804,12 +1060,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.inputAnomaliGi,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final extra = _extractExtra(state);
           return BlocProvider<OpgiAnomaliCubit>(
             create: (_) => sl<OpgiAnomaliCubit>(),
             child: InputAnomaliGiPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
+              garduIndukId: _safeInt(extra['garduIndukId']),
+              garduIndukNama: extra['garduIndukNama']?.toString() ?? '-',
             ),
           );
         },
@@ -817,12 +1073,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.inputKondisiAnomaliGi,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final extra = _extractExtra(state);
           return BlocProvider<OpgiAnomaliCubit>(
             create: (_) => sl<OpgiAnomaliCubit>(),
             child: InputKondisiAnomaliGiPage(
-              anomaliId: extra['anomaliId'] as int? ?? 0,
-              assetNama: extra['assetNama'] as String? ?? '-',
+              anomaliId: _safeInt(extra['anomaliId']),
+              assetNama: extra['assetNama']?.toString() ?? '-',
             ),
           );
         },
@@ -830,22 +1086,49 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.il1,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final gi = _parseGarduIndukFromState(state);
           return Il1HubPage(
-            garduIndukId: extra['garduIndukId'] as int? ?? (extra['garduInduk'] as Map?)?['id'] as int? ?? 0,
-            garduIndukNama: extra['garduIndukNama'] as String? ?? (extra['garduInduk'] as Map?)?['nama'] as String? ?? '-',
+            garduIndukId: gi.id,
+            garduIndukNama: gi.nama,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/il1',
+        builder: (context, state) {
+          final gi = _parseGarduIndukFromState(state);
+          return Il1HubPage(
+            garduIndukId: gi.id,
+            garduIndukNama: gi.nama,
           );
         },
       ),
       GoRoute(
         path: AppRoutes.il1Kubikel,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final gi = _parseGarduIndukFromState(state);
           return BlocProvider<OpgiIl1Cubit>(
             create: (_) => sl<OpgiIl1Cubit>(),
             child: Il1KubikelPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
+              garduIndukId: gi.id,
+              garduIndukNama: gi.nama,
+              scanValue: gi.scanValue,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.dataIl1Kubikel,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiIl1Cubit>(
+            create: (_) => sl<OpgiIl1Cubit>(),
+            child: DataIl1KubikelPage(
+              id: _safeInt(extra['id']),
+              nama: extra['nama']?.toString() ?? '-',
+              garduInduk: (extra['garduInduk'] ?? extra['garduIndukNama'])?.toString() ?? '-',
+              garduIndukId: _safeInt(extra['garduIndukId']),
+              status: extra['status']?.toString() ?? '',
             ),
           );
         },
@@ -853,14 +1136,23 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.inputIl1Kubikel,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final extra = _extractExtra(state);
           return BlocProvider<OpgiIl1Cubit>(
             create: (_) => sl<OpgiIl1Cubit>(),
             child: InputIl1KubikelPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
-              penyulangId: extra['penyulangId'] as int? ?? 0,
-              penyulangNama: extra['penyulangNama'] as String? ?? '-',
+              params: extra,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.updateIl1Kubikel,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiIl1Cubit>(
+            create: (_) => sl<OpgiIl1Cubit>(),
+            child: UpdateIl1KubikelPage(
+              params: extra,
             ),
           );
         },
@@ -868,12 +1160,29 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.il1TrafoPs,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final gi = _parseGarduIndukFromState(state);
           return BlocProvider<OpgiIl1Cubit>(
             create: (_) => sl<OpgiIl1Cubit>(),
             child: Il1TrafoPsPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
+              garduIndukId: gi.id,
+              garduIndukNama: gi.nama,
+              scanValue: gi.scanValue,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.dataIl1TrafoPs,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiIl1Cubit>(
+            create: (_) => sl<OpgiIl1Cubit>(),
+            child: DataIl1TrafoPsPage(
+              id: _safeInt(extra['id']),
+              nama: extra['nama']?.toString() ?? '-',
+              garduInduk: (extra['garduInduk'] ?? extra['garduIndukNama'])?.toString() ?? '-',
+              garduIndukNama: (extra['garduIndukNama'] ?? extra['garduInduk'])?.toString() ?? '-',
+              status: extra['status']?.toString() ?? '',
             ),
           );
         },
@@ -881,14 +1190,23 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.inputIl1TrafoPs,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final extra = _extractExtra(state);
           return BlocProvider<OpgiIl1Cubit>(
             create: (_) => sl<OpgiIl1Cubit>(),
             child: InputIl1TrafoPsPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
-              trafoId: extra['trafoId'] as int? ?? 0,
-              trafoNama: extra['trafoNama'] as String? ?? '-',
+              params: extra,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.updateIl1TrafoPs,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiIl1Cubit>(
+            create: (_) => sl<OpgiIl1Cubit>(),
+            child: UpdateIl1TrafoPsPage(
+              params: extra,
             ),
           );
         },
@@ -896,12 +1214,28 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.il1Sipil,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final gi = _parseGarduIndukFromState(state);
           return BlocProvider<OpgiIl1Cubit>(
             create: (_) => sl<OpgiIl1Cubit>(),
             child: Il1SipilPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
+              garduIndukId: gi.id,
+              garduIndukNama: gi.nama,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.dataIl1Sipil,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiIl1Cubit>(
+            create: (_) => sl<OpgiIl1Cubit>(),
+            child: DataIl1SipilPage(
+              id: _safeInt(extra['id']),
+              nama: extra['nama']?.toString() ?? '-',
+              gedung: extra['gedung']?.toString() ?? '-',
+              garduInduk: (extra['garduInduk'] ?? extra['garduIndukNama'])?.toString() ?? '-',
+              status: extra['status']?.toString() ?? '',
             ),
           );
         },
@@ -909,14 +1243,23 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.inputIl1Sipil,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final extra = _extractExtra(state);
           return BlocProvider<OpgiIl1Cubit>(
             create: (_) => sl<OpgiIl1Cubit>(),
             child: InputIl1SipilPage(
-              garduIndukId: extra['garduIndukId'] as int? ?? 0,
-              garduIndukNama: extra['garduIndukNama'] as String? ?? '-',
-              gedung: extra['gedung'] as String? ?? 'CELL',
-              gedungNama: extra['gedungNama'] as String? ?? 'Gedung Kontrol',
+              params: extra,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.updateIl1Sipil,
+        builder: (context, state) {
+          final extra = _extractExtra(state);
+          return BlocProvider<OpgiIl1Cubit>(
+            create: (_) => sl<OpgiIl1Cubit>(),
+            child: UpdateIl1SipilPage(
+              params: extra,
             ),
           );
         },

@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
+import '../../../../core/constants/storage_constants.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/storage/preferences_service.dart';
+import '../../../auth/data/models/user_model.dart';
 import '../../domain/repositories/line_walker_repository.dart';
 import '../datasources/line_walker_remote_data_source.dart';
 import '../models/kegiatan_sosial_model.dart';
@@ -15,8 +19,21 @@ import 'package:super_i_mobile/features/home/data/models/ppl_condition_summary_m
 
 class LineWalkerRepositoryImpl implements LineWalkerRepository {
   final LineWalkerRemoteDataSource remoteDataSource;
+  final PreferencesService? preferencesService;
 
-  LineWalkerRepositoryImpl(this.remoteDataSource);
+  LineWalkerRepositoryImpl(this.remoteDataSource, [this.preferencesService]);
+
+  bool _canAccessTower() {
+    if (preferencesService == null) return true;
+    final userJson = preferencesService!.getString(StorageConstants.userProfile);
+    if (userJson == null) return true;
+    try {
+      final user = UserModel.fromJson(jsonDecode(userJson) as Map<String, dynamic>);
+      return user.canAccessLineWalkerTower;
+    } catch (_) {
+      return true;
+    }
+  }
 
   String _extractError(dynamic e, String defaultMessage) {
     if (e is DioException) {
@@ -50,6 +67,9 @@ class LineWalkerRepositoryImpl implements LineWalkerRepository {
 
   @override
   Future<Either<Failure, List<TowerAssetModel>>> getTowers({String type = 'GANTRY,TOWER'}) async {
+    if (!_canAccessTower()) {
+      return const Right([]);
+    }
     try {
       final res = await remoteDataSource.getTowers(type: type);
       return Right(res);
@@ -60,6 +80,9 @@ class LineWalkerRepositoryImpl implements LineWalkerRepository {
 
   @override
   Future<void> prefetchTowers() async {
+    if (!_canAccessTower()) {
+      return;
+    }
     try {
       await Future.wait([
         remoteDataSource.getTowers(type: 'GANTRY,TOWER'),

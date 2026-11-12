@@ -23,6 +23,16 @@ class AbsenPage extends StatelessWidget {
           title: const Text('Presensi Lapangan'),
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
+          actions: [
+            Builder(
+              builder: (ctx) => IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  ctx.read<AbsenInfoCubit>().fetchAbsenInfo();
+                },
+              ),
+            ),
+          ],
         ),
         body: BlocBuilder<AbsenInfoCubit, AbsenInfoState>(
           builder: (context, state) {
@@ -61,21 +71,62 @@ class AbsenPage extends StatelessWidget {
               final info = state.info;
               final isInside = state.isInsideRadius;
 
+              // Format Tanggal
+              String tanggalFormatted;
+              if (info.absen != null &&
+                  info.absen!['tahunShift'] != null &&
+                  info.absen!['bulanShift'] != null &&
+                  info.absen!['tanggalShift'] != null) {
+                final d = DateTime(
+                  info.absen!['tahunShift'] as int,
+                  (info.absen!['bulanShift'] as int) + 1,
+                  info.absen!['tanggalShift'] as int,
+                );
+                tanggalFormatted =
+                    DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(d);
+              } else if (info.shift != null &&
+                  info.shift!['tahun'] != null &&
+                  info.shift!['bulan'] != null &&
+                  info.shift!['tanggal'] != null) {
+                final d = DateTime(
+                  info.shift!['tahun'] as int,
+                  (info.shift!['bulan'] as int) + 1,
+                  info.shift!['tanggal'] as int,
+                );
+                tanggalFormatted =
+                    DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(d);
+              } else {
+                tanggalFormatted = DateFormat(
+                  'EEEE, d MMMM yyyy',
+                  'id_ID',
+                ).format(DateTime.now());
+              }
+
               // Format Jam Shift
               String jamShift = '-';
-              if (info.shift != null && info.shift!['ketentuan'] != null) {
+              if (info.absen != null) {
+                final ket = info.absen!['keterangan']?.toString() ?? 'Shift';
+                final jMasuk =
+                    info.absen!['jamMasuk']?.toString().padLeft(2, '0') ?? '00';
+                final mMasuk =
+                    info.absen!['menitMasuk']?.toString().padLeft(2, '0') ?? '00';
+                final jKeluar =
+                    info.absen!['jamKeluar']?.toString().padLeft(2, '0') ?? '00';
+                final mKeluar =
+                    info.absen!['menitKeluar']?.toString().padLeft(2, '0') ??
+                    '00';
+                jamShift = '$ket ($jMasuk:$mMasuk - $jKeluar:$mKeluar WIB)';
+              } else if (info.shift != null &&
+                  info.shift!['ketentuan'] != null) {
                 final k = info.shift!['ketentuan'];
                 final start =
                     '${k['startHour'].toString().padLeft(2, '0')}:${k['startMinute'].toString().padLeft(2, '0')}';
                 final end =
                     '${k['endHour'].toString().padLeft(2, '0')}:${k['endMinute'].toString().padLeft(2, '0')}';
                 jamShift = '$start - $end WIB';
+              } else {
+                jamShift = info.keterangan;
               }
-
-              final todayFormatted = DateFormat(
-                'EEEE, d MMMM yyyy',
-                'id_ID',
-              ).format(DateTime.now());
 
               return RefreshIndicator(
                 onRefresh: () async {
@@ -155,7 +206,7 @@ class AbsenPage extends StatelessWidget {
                                 ),
                               ),
                               const Divider(height: 16),
-                              _buildInfoRow('Tanggal', todayFormatted),
+                              _buildInfoRow('Tanggal', tanggalFormatted),
                               const SizedBox(height: 8),
                               _buildInfoRow('Jam Kerja', jamShift),
                               const SizedBox(height: 8),
@@ -191,9 +242,12 @@ class AbsenPage extends StatelessWidget {
                                         AppRoutes.absenProcessing,
                                         extra: {
                                           'type': 'MASUK',
-                                          'dataShift': info.shift != null
-                                              ? {'shift': info.shift}
-                                              : null,
+                                          'dataShift': {
+                                            if (info.shift != null)
+                                              'shift': info.shift,
+                                            if (info.absen != null)
+                                              'absen': info.absen,
+                                          },
                                           'absenLocation': info.absenLocation,
                                         },
                                       );
@@ -231,9 +285,12 @@ class AbsenPage extends StatelessWidget {
                                         AppRoutes.absenProcessing,
                                         extra: {
                                           'type': 'KELUAR',
-                                          'dataShift': info.shift != null
-                                              ? {'shift': info.shift}
-                                              : null,
+                                          'dataShift': {
+                                            if (info.shift != null)
+                                              'shift': info.shift,
+                                            if (info.absen != null)
+                                              'absen': info.absen,
+                                          },
                                           'absenLocation': info.absenLocation,
                                         },
                                       );

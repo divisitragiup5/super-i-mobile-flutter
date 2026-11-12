@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -32,6 +33,7 @@ class AbsenInfoCubit extends Cubit<AbsenInfoState> {
 
     // 2. Ambil data info absen dari backend
     final result = await repository.getAbsensiInfo();
+    debugPrint('Fetched absen info: $result, user position: $position');
 
     result.fold((failure) => emit(AbsenInfoError(message: failure.message)), (
       info,
@@ -53,6 +55,7 @@ class AbsenInfoCubit extends Cubit<AbsenInfoState> {
           }
         }
       }
+      debugPrint('User position: $position, isInsideRadius: $isInside, info: $info');
 
       emit(
         AbsenInfoLoaded(

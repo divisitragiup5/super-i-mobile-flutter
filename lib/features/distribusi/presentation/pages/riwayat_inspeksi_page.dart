@@ -41,6 +41,12 @@ class _RiwayatInspeksiPageState extends State<RiwayatInspeksiPage> {
         title: const Text('Riwayat Inspeksi SUTM'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _onSearch,
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -94,9 +100,15 @@ class _RiwayatInspeksiPageState extends State<RiwayatInspeksiPage> {
                       }
 
                       if (state is WoInspeksiError) {
-                        return Center(
-                          child: Text(state.message,
-                              style: const TextStyle(color: Colors.white)),
+                        return ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                            Center(
+                              child: Text(state.message,
+                                  style: const TextStyle(color: Colors.white)),
+                            ),
+                          ],
                         );
                       }
 
@@ -105,13 +117,20 @@ class _RiwayatInspeksiPageState extends State<RiwayatInspeksiPage> {
                           : [];
 
                       if (items.isEmpty) {
-                        return const Center(
-                          child: Text('Tidak ada riwayat inspeksi ditemukan',
-                              style: TextStyle(color: Colors.white)),
+                        return ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                            const Center(
+                              child: Text('Tidak ada riwayat inspeksi ditemukan',
+                                  style: TextStyle(color: Colors.white)),
+                            ),
+                          ],
                         );
                       }
 
                       return ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: items.length,
                         itemBuilder: (context, index) {
