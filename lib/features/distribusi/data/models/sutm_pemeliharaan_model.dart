@@ -8,34 +8,78 @@ class RincianPemeliharaanItem {
   final String sub;
   final String komponen;
   final String? fasa;
+  final String? nilaiAwal;
   final String status; // 'TERLAKSANA' | 'KENDALA'
   final int jumlah;
   final String? kendala;
+  final String? kondisiSesudah;
   final File? fotoSebelum;
   final File? fotoProses;
   final File? fotoSesudah;
+  final String? fotoTemuanAwalUrl;
+  final String? keteranganAwal;
 
   const RincianPemeliharaanItem({
     required this.rencanaId,
     required this.sub,
     required this.komponen,
     this.fasa,
+    this.nilaiAwal,
     this.status = 'TERLAKSANA',
     this.jumlah = 1,
     this.kendala,
+    this.kondisiSesudah = 'Baik',
     this.fotoSebelum,
     this.fotoProses,
     this.fotoSesudah,
+    this.fotoTemuanAwalUrl,
+    this.keteranganAwal,
   });
+
+  RincianPemeliharaanItem copyWith({
+    int? rencanaId,
+    String? sub,
+    String? komponen,
+    String? fasa,
+    String? nilaiAwal,
+    String? status,
+    int? jumlah,
+    String? kendala,
+    String? kondisiSesudah,
+    File? fotoSebelum,
+    File? fotoProses,
+    File? fotoSesudah,
+    String? fotoTemuanAwalUrl,
+    String? keteranganAwal,
+  }) {
+    return RincianPemeliharaanItem(
+      rencanaId: rencanaId ?? this.rencanaId,
+      sub: sub ?? this.sub,
+      komponen: komponen ?? this.komponen,
+      fasa: fasa ?? this.fasa,
+      nilaiAwal: nilaiAwal ?? this.nilaiAwal,
+      status: status ?? this.status,
+      jumlah: jumlah ?? this.jumlah,
+      kendala: kendala ?? this.kendala,
+      kondisiSesudah: kondisiSesudah ?? this.kondisiSesudah,
+      fotoSebelum: fotoSebelum ?? this.fotoSebelum,
+      fotoProses: fotoProses ?? this.fotoProses,
+      fotoSesudah: fotoSesudah ?? this.fotoSesudah,
+      fotoTemuanAwalUrl: fotoTemuanAwalUrl ?? this.fotoTemuanAwalUrl,
+      keteranganAwal: keteranganAwal ?? this.keteranganAwal,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'rencanaId': rencanaId,
         'sub': sub,
         'komponen': komponen,
         'fasa': fasa,
+        'nilaiAwal': nilaiAwal,
         'status': status,
         'jumlah': jumlah,
         'kendala': kendala,
+        if (kondisiSesudah != null) 'kondisiSesudah': kondisiSesudah,
       };
 }
 

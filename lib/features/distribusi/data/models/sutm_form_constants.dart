@@ -1,4 +1,4 @@
-/// Konstanta dan opsi formulir inspeksi komponen Distribusi SUTM
+/// Konstanta dan opsi formulir inspeksi komponen Distribusi SUTM sesuai super-i-mobile
 class SutmFormConstants {
   SutmFormConstants._();
 
@@ -77,7 +77,23 @@ class SutmFormConstants {
     'Tidak Ada',
   ];
 
+  static const List<String> pdOptions = [
+    'Baik',
+    'Kurang Baik',
+  ];
+
   // 3. Sub Isolator
+  static const List<String> jenisIsolatorTm13Options = [
+    'Pin Post',
+    'Line Post',
+  ];
+
+  static const List<String> jenisIsolatorTm5Options = [
+    'Suspension',
+    'Pin Post',
+    'Line Post',
+  ];
+
   static const List<String> kondisiIsolatorOptions = [
     'Baik',
     'Flash Over',
@@ -87,12 +103,6 @@ class SutmFormConstants {
     'Korosi Pin/Cap',
   ];
 
-  static const List<String> jenisIsolatorOptions = [
-    'Pin Post',
-    'Line Post',
-    'Suspension',
-  ];
-
   static const List<String> topTiesOptions = [
     'Baik',
     'Kendor',
@@ -100,7 +110,7 @@ class SutmFormConstants {
     'Tidak Ada',
   ];
 
-  static const List<String> kondisiCrossArmOptions = [
+  static const List<String> crossArmOptions = [
     'Baik',
     'Miring',
     'Korosi Ringan',
@@ -108,10 +118,39 @@ class SutmFormConstants {
     'Bengkuk',
   ];
 
+  static const List<String> armTieOptions = [
+    'Baik',
+    'Korosi Ringan',
+    'Korosi Berat',
+    'Kendor',
+    'Lepas',
+    'Bengkuk',
+    'Patah',
+  ];
+
+  static const List<String> sambunganJumperOptions = [
+    'PG Clamp',
+    'C-Wedge',
+    'Joint Sleeve',
+    'Kompresi',
+    'Tidak Ada',
+  ];
+
   // 4. Sub Proteksi & Pembumian
   static const List<String> gswLetakOptions = [
     'Puncak Tiang',
     'Bawah Fasa',
+    'Tidak Ada',
+  ];
+
+  static const List<String> kondisiGswOptions = [
+    'Baik',
+    'Rantas',
+    'Korosi',
+  ];
+
+  static const List<String> hasArresterOptions = [
+    'Ada',
     'Tidak Ada',
   ];
 
@@ -128,15 +167,29 @@ class SutmFormConstants {
     'Ground Lead Disconnector Putus',
   ];
 
-  static const List<String> kondisiGroundingOptions = [
+  static const List<String> jumperArresterOptions = [
+    'Baik',
+    'Korosi',
+    'Rantas',
+    'Putus',
+    'Lepas',
+  ];
+
+  static const List<String> kawatPembumianOptions = [
+    'Ada',
+    'Tidak Ada',
+  ];
+
+  static const List<String> groundingOptions = [
     'Baik',
     'Putus',
     'Korosi',
     'Hilang',
     'Tidak Terpasang',
+    'Tidak Ada',
   ];
 
-  // 5. Sub Konstruksi Penopang
+  // 5. Sub Konstruksi Penopang (Aksesoris)
   static const List<String> jenisPenopangOptions = [
     'Guy Wire (Trikang)',
     'Strut Pole',
@@ -148,50 +201,86 @@ class SutmFormConstants {
     'Baik',
     'Kendor',
     'Korosi',
-    'Pondasi Amblas',
+    'Hilang',
   ];
 
-  // 6. Sub Peralatan Hubung
+  static const List<String> kondisiSteelWireOptions = [
+    'Baik',
+    'Kendor',
+    'Korosi',
+    'Putus',
+  ];
+
+  static const List<String> pondasiOptions = [
+    'Baik',
+    'Retak',
+    'Amblas',
+    'Tertimbun',
+  ];
+
+  // 6. Sub Peralatan Hubung (Switching)
   static const List<String> fcoOptions = [
     'Ada',
     'Tidak Ada',
   ];
 
-  static const List<String> kondisiFcoOptions = [
+  static const List<String> sambunganFcoOptions = [
     'Baik',
-    'Tabung Fuse Jatuh/Lepas',
-    'Isolator Pecah',
-    'Konektor Korosi',
+    'Korosi',
+    'Kendor',
+    'Lepas',
+    'Tidak Ada',
   ];
 
-  static const List<String> lbsOptions = [
-    'Ada',
+  static const List<String> lbsKonvensionalOptions = [
+    'Baik',
+    'Rusak',
+    'Tidak Ada',
+  ];
+
+  static const List<String> lbsRemoteOptions = [
+    'Baik',
+    'Rusak',
     'Tidak Ada',
   ];
 
   static const List<String> recloserOptions = [
-    'Ada',
+    'Baik',
+    'Rusak',
     'Tidak Ada',
   ];
 
   // 7. Sub ROW & Lingkungan
-  static const List<String> jenisPohonOptions = [
-    'Keras',
-    'Sedang',
-    'Lunak',
-    'Bambu',
-    'Kelapa/Sawit',
+  static const List<String> rowJenisEntitasOptions = [
+    'Pohon',
+    'Bangunan',
+    'Reklame/Baliho',
+    'Antena',
+    'Umbul-umbul/Bendera',
+    'Lainnya',
   ];
 
-  static const List<String> jarakRowOptions = [
-    '< 1 Meter (Sangat Bahaya)',
-    '1 - 2.5 Meter (Perlu Tebang)',
-    '> 2.5 Meter (Aman)',
+  static const List<String> rowJarakOptions = [
+    '< 2.5 Meter',
+    '>= 2.5 Meter',
   ];
 
-  static const List<String> jenisTindakanRowOptions = [
-    'Pangkas Ranting',
-    'Tebang Pohon',
-    'Sosialisasi ROW',
+  static const List<String> rowPhasaOptions = [
+    'R',
+    'S',
+    'T',
+    'Netral',
+    'Semua Fasa',
   ];
+
+  // Aliases for compatibility
+  static const List<String> kondisiTopTiesOptions = topTiesOptions;
+  static const List<String> kondisiCrossArmOptions = crossArmOptions;
+  static const List<String> kondisiArmTieOptions = armTieOptions;
+  static const List<String> arresterOptions = hasArresterOptions;
+  static const List<String> penopangJenisOptions = jenisPenopangOptions;
+  static const List<String> penopangKondisiOptions = kondisiPenopangOptions;
+  static const List<String> jenisEntitasOptions = rowJenisEntitasOptions;
+  static const List<String> jarakOptions = rowJarakOptions;
+  static const List<String> fasaRowOptions = rowPhasaOptions;
 }

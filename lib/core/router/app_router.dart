@@ -79,6 +79,9 @@ import '../../features/distribusi/presentation/pages/inspeksi_yantek_page.dart';
 import '../../features/distribusi/presentation/pages/inspeksi_yantek_form_page.dart';
 import '../../features/distribusi/presentation/pages/riwayat_penilaian_inspeksi_page.dart';
 import '../../features/distribusi/presentation/pages/riwayat_penilaian_har_page.dart';
+import '../../features/distribusi/presentation/pages/detail_sutm_pemeliharaan_page.dart';
+import '../../features/distribusi/presentation/pages/detail_riwayat_penilaian_distribusi_page.dart';
+import '../../features/distribusi/presentation/cubit/validasi_pemeliharaan_cubit.dart';
 import '../../features/distribusi/data/models/sutm_workorder_model.dart';
 
 // OPGI
@@ -637,7 +640,10 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.riwayatInspeksi,
-        builder: (context, state) => const RiwayatInspeksiPage(),
+        builder: (context, state) => BlocProvider<WoInspeksiCubit>(
+          create: (_) => sl<WoInspeksiCubit>(),
+          child: const RiwayatInspeksiPage(),
+        ),
       ),
 
       // SUTM Pemeliharaan
@@ -671,6 +677,17 @@ class AppRouter {
         ),
       ),
       GoRoute(
+        path: AppRoutes.detailSutmPemeliharaan,
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is SutmItemModel) {
+            return DetailSutmPemeliharaanPage(item: extra);
+          }
+          final map = extra as Map<String, dynamic>? ?? {};
+          return DetailSutmPemeliharaanPage(item: SutmItemModel.fromJson(map));
+        },
+      ),
+      GoRoute(
         path: AppRoutes.inspeksiPemeliharaanForm,
         builder: (context, state) => BlocProvider<PemeliharaanFormCubit>(
           create: (_) => sl<PemeliharaanFormCubit>(),
@@ -679,11 +696,17 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.validasiPemeliharaan,
-        builder: (context, state) => const ValidasiPemeliharaanPage(),
+        builder: (context, state) => BlocProvider<ValidasiPemeliharaanCubit>(
+          create: (_) => sl<ValidasiPemeliharaanCubit>(),
+          child: const ValidasiPemeliharaanPage(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.riwayatPemeliharaan,
-        builder: (context, state) => const RiwayatPemeliharaanPage(),
+        builder: (context, state) => BlocProvider<WoPemeliharaanCubit>(
+          create: (_) => sl<WoPemeliharaanCubit>(),
+          child: const RiwayatPemeliharaanPage(),
+        ),
       ),
 
       // Yantek & Penilaian
@@ -706,8 +729,28 @@ class AppRouter {
         builder: (context, state) => const RiwayatPenilaianInspeksiPage(),
       ),
       GoRoute(
+        path: AppRoutes.detailRiwayatPenilaianInspeksi,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return DetailRiwayatPenilaianDistribusiPage(
+            type: 'inspeksi',
+            item: extra['item'] as Map<String, dynamic>? ?? extra,
+          );
+        },
+      ),
+      GoRoute(
         path: AppRoutes.riwayatPenilaianHar,
         builder: (context, state) => const RiwayatPenilaianHarPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.detailRiwayatPenilaianHar,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return DetailRiwayatPenilaianDistribusiPage(
+            type: 'har',
+            item: extra['item'] as Map<String, dynamic>? ?? extra,
+          );
+        },
       ),
 
       // ─────────────────────────────────────────────────────────────

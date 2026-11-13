@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/router/route_constants.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/field_map_viewer.dart';
+import '../../../../core/widgets/google_sutm_map_card.dart';
 import '../cubit/wo_inspeksi_cubit.dart';
 
 class RuteInspeksiPage extends StatefulWidget {
@@ -154,29 +154,26 @@ class _RuteInspeksiPageState extends State<RuteInspeksiPage> {
                         ? state.todayWorkOrders
                         : [];
 
-                    final allPins = items
+                    final sutmItems = items
                         .expand((wo) => wo.items)
                         .where((i) => i.latitude != null && i.longitude != null)
-                        .map((i) => MapPinItem(
-                              id: i.id.toString(),
-                              title: i.nama,
-                              subtitle: i.idAsset,
-                              latitude: i.latitude!,
-                              longitude: i.longitude!,
+                        .map((i) => SutmMapItem(
+                              idAsset: i.idAsset,
+                              name: i.nama,
+                              latitude: i.latitude,
+                              longitude: i.longitude,
                               color: AppColors.primary,
+                              rawData: i,
                             ))
                         .toList();
 
                     return ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       children: [
-                        if (allPins.isNotEmpty) ...[
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: FieldMapViewer(
-                              pins: allPins,
-                              height: 220,
-                            ),
+                        if (sutmItems.isNotEmpty) ...[
+                          GoogleSutmMapCard(
+                            items: sutmItems,
+                            height: 220,
                           ),
                           const SizedBox(height: 16),
                         ],

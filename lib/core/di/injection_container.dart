@@ -71,6 +71,7 @@ import '../../features/distribusi/domain/repositories/sutm_repository.dart';
 import '../../features/distribusi/presentation/cubit/wo_inspeksi_cubit.dart';
 import '../../features/distribusi/presentation/cubit/inspeksi_form_cubit.dart';
 import '../../features/distribusi/presentation/cubit/validasi_inspeksi_cubit.dart';
+import '../../features/distribusi/presentation/cubit/validasi_pemeliharaan_cubit.dart';
 import '../../features/distribusi/presentation/cubit/wo_pemeliharaan_cubit.dart';
 import '../../features/distribusi/presentation/cubit/pemeliharaan_form_cubit.dart';
 import '../../features/distribusi/presentation/cubit/yantek_cubit.dart';
@@ -342,6 +343,9 @@ Future<void> initDependencies() async {
   );
   sl.registerFactory<PemeliharaanFormCubit>(
     () => PemeliharaanFormCubit(repository: sl<SutmRepository>()),
+  );
+  sl.registerFactory<ValidasiPemeliharaanCubit>(
+    () => ValidasiPemeliharaanCubit(repository: sl<SutmRepository>()),
   );
   sl.registerFactory<YantekCubit>(
     () => YantekCubit(repository: sl<SutmRepository>()),

@@ -169,6 +169,26 @@ class SutmRepositoryImpl implements SutmRepository {
   }
 
   @override
+  Future<Either<Failure, Map<String, dynamic>>> validateInspeksi({
+    required String role,
+    required int id,
+    required FormData formData,
+  }) async {
+    try {
+      final result = await remoteDataSource.validateInspeksi(
+        role: role,
+        id: id,
+        formData: formData,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, bool>> approveBulkInspeksi({
     required String role,
     required List<int> inspeksiIds,
@@ -336,6 +356,206 @@ class SutmRepositoryImpl implements SutmRepository {
     try {
       final result = await remoteDataSource.getDistribusiPerformanceHistory(
         type: type,
+        bulan: bulan,
+        tahun: tahun,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<dynamic>>> getRiwayatInspeksiChart() async {
+    try {
+      final result = await remoteDataSource.getRiwayatInspeksiChart();
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<dynamic>>> getRiwayatPemeliharaanChart() async {
+    try {
+      final result = await remoteDataSource.getRiwayatPemeliharaanChart();
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> getRiwayatPemeliharaanDetail(
+      String workOrderSutmItemId) async {
+    try {
+      final result = await remoteDataSource
+          .getRiwayatPemeliharaanDetail(workOrderSutmItemId);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<SutmWorkOrderItem>>>
+      getValidasiPemeliharaanWorkOrderList({String? search}) async {
+    try {
+      final result = await remoteDataSource.getValidasiPemeliharaanWorkOrderList(
+          search: search);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<SutmItemModel>>>
+      getValidasiPemeliharaanSutmList({String? search}) async {
+    try {
+      final result =
+          await remoteDataSource.getValidasiPemeliharaanSutmList(search: search);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> approvePemeliharaan({
+    required String role,
+    required int id,
+  }) async {
+    try {
+      final result =
+          await remoteDataSource.approvePemeliharaan(role: role, id: id);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> rejectPemeliharaan({
+    required String role,
+    required int id,
+    required String reason,
+  }) async {
+    try {
+      final result = await remoteDataSource.rejectPemeliharaan(
+          role: role, id: id, reason: reason);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> approveBulkPemeliharaan({
+    required String role,
+    required int workOrderId,
+    List<int>? ids,
+  }) async {
+    try {
+      final result = await remoteDataSource.approveBulkPemeliharaan(
+          role: role, workOrderId: workOrderId, ids: ids);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> rejectBulkPemeliharaan({
+    required String role,
+    required int workOrderId,
+    required String reason,
+    List<int>? ids,
+  }) async {
+    try {
+      final result = await remoteDataSource.rejectBulkPemeliharaan(
+          role: role, workOrderId: workOrderId, reason: reason, ids: ids);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> getPenilaianHistory({
+    required String type,
+    int? cursor,
+    int? bulan,
+    int? tahun,
+  }) async {
+    try {
+      final result = await remoteDataSource.getPenilaianHistory(
+        type: type,
+        cursor: cursor,
+        bulan: bulan,
+        tahun: tahun,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> getPenilaianDetailHistory({
+    required String type,
+    required String timeSet,
+    int? bulan,
+    int? tahun,
+  }) async {
+    try {
+      final result = await remoteDataSource.getPenilaianDetailHistory(
+        type: type,
+        timeSet: timeSet,
+        bulan: bulan,
+        tahun: tahun,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> getPenilaianDetailChart({
+    required String type,
+    required String timeSet,
+    int? bulan,
+    int? tahun,
+  }) async {
+    try {
+      final result = await remoteDataSource.getPenilaianDetailChart(
+        type: type,
+        timeSet: timeSet,
         bulan: bulan,
         tahun: tahun,
       );

@@ -35,6 +35,11 @@ abstract class SutmRemoteDataSource {
     required int id,
     required String reason,
   });
+  Future<Map<String, dynamic>> validateInspeksi({
+    required String role,
+    required int id,
+    required FormData formData,
+  });
   Future<bool> approveBulkInspeksi({
     required String role,
     required List<int> inspeksiIds,
@@ -59,6 +64,40 @@ abstract class SutmRemoteDataSource {
     String? reason,
   });
 
+  // Charts
+  Future<List<dynamic>> getRiwayatInspeksiChart();
+  Future<List<dynamic>> getRiwayatPemeliharaanChart();
+
+  // Pemeliharaan Validation & Detail
+  Future<Map<String, dynamic>> getRiwayatPemeliharaanDetail(
+      String workOrderSutmItemId);
+  Future<List<SutmWorkOrderItem>> getValidasiPemeliharaanWorkOrderList({
+    String? search,
+  });
+  Future<List<SutmItemModel>> getValidasiPemeliharaanSutmList({
+    String? search,
+  });
+  Future<bool> approvePemeliharaan({
+    required String role,
+    required int id,
+  });
+  Future<bool> rejectPemeliharaan({
+    required String role,
+    required int id,
+    required String reason,
+  });
+  Future<bool> approveBulkPemeliharaan({
+    required String role,
+    required int workOrderId,
+    List<int>? ids,
+  });
+  Future<bool> rejectBulkPemeliharaan({
+    required String role,
+    required int workOrderId,
+    required String reason,
+    List<int>? ids,
+  });
+
   // Yantek
   Future<List<YantekAssetModel>> getYantekMapAssets(YantekFilterParams params);
   Future<LastInspeksiModel?> getLastInspeksiAsset(String assetId);
@@ -73,6 +112,24 @@ abstract class SutmRemoteDataSource {
   Future<Map<String, dynamic>> getDistribusiPerformanceDetail({
     required String type,
     required String id,
+  });
+  Future<Map<String, dynamic>> getPenilaianHistory({
+    required String type,
+    int? cursor,
+    int? bulan,
+    int? tahun,
+  });
+  Future<Map<String, dynamic>> getPenilaianDetailHistory({
+    required String type,
+    required String timeSet,
+    int? bulan,
+    int? tahun,
+  });
+  Future<Map<String, dynamic>> getPenilaianDetailChart({
+    required String type,
+    required String timeSet,
+    int? bulan,
+    int? tahun,
   });
 }
 
@@ -276,6 +333,28 @@ class SutmRemoteDataSourceImpl implements SutmRemoteDataSource {
     } catch (e) {
       throw ServerException(
         message: 'Gagal menolak inspeksi: ${e.toString()}',
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> validateInspeksi({
+    required String role,
+    required int id,
+    required FormData formData,
+  }) async {
+    try {
+      final response = await apiClient.post(
+        '/gama/distribusi/max/inspeksi/$role/$id/validate',
+        data: formData,
+        options: Options(
+          headers: {'Content-Type': 'multipart/form-data'},
+        ),
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      throw ServerException(
+        message: 'Gagal mengirim validasi inspeksi: ${e.toString()}',
       );
     }
   }
@@ -520,7 +599,265 @@ class SutmRemoteDataSourceImpl implements SutmRemoteDataSource {
       return response.data as Map<String, dynamic>;
     } catch (e) {
       throw ServerException(
-        message: 'Gagal mengambil detail penilaian: ${e.toString()}',
+        message: 'Gagal mengambil detail penilaian performa: ${e.toString()}',
+      );
+    }
+  }
+
+  @override
+  Future<List<dynamic>> getRiwayatInspeksiChart() async {
+    try {
+      final response = await apiClient.get(
+        '/gama/distribusi/max/wo-inspeksi/mobile/riwayat/chart',
+      );
+      final data = response.data;
+      return data is Map
+          ? (data['data'] as List? ?? [])
+          : (data is List ? data : []);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  @override
+  Future<List<dynamic>> getRiwayatPemeliharaanChart() async {
+    try {
+      final response = await apiClient.get(
+        '/gama/distribusi/max/wo-pemeliharaan/mobile/riwayat/chart',
+      );
+      final data = response.data;
+      return data is Map
+          ? (data['data'] as List? ?? [])
+          : (data is List ? data : []);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> getRiwayatPemeliharaanDetail(
+      String workOrderSutmItemId) async {
+    try {
+      final response = await apiClient.get(
+        '/gama/distribusi/max/wo-pemeliharaan/mobile/riwayat/$workOrderSutmItemId',
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      throw ServerException(
+        message: 'Gagal mengambil detail pemeliharaan: ${e.toString()}',
+      );
+    }
+  }
+
+  @override
+  Future<List<SutmWorkOrderItem>> getValidasiPemeliharaanWorkOrderList({
+    String? search,
+  }) async {
+    try {
+      final response = await apiClient.get(
+        '/gama/distribusi/max/wo-pemeliharaan/mobile/list',
+        queryParameters: {
+          'status': 'ON_PROGRESS',
+          if (search != null && search.isNotEmpty) 'search': search,
+        },
+      );
+      final rawData = response.data;
+      final List<dynamic> items = rawData is List
+          ? rawData
+          : (rawData['data']?['items'] as List? ??
+              rawData['data'] as List? ??
+              []);
+      return items
+          .map((item) =>
+              SutmWorkOrderItem.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw ServerException(
+        message:
+            'Gagal mengambil daftar validasi WO pemeliharaan: ${e.toString()}',
+      );
+    }
+  }
+
+  @override
+  Future<List<SutmItemModel>> getValidasiPemeliharaanSutmList({
+    String? search,
+  }) async {
+    try {
+      final response = await apiClient.get(
+        '/gama/distribusi/max/wo-pemeliharaan/mobile/sutm',
+        queryParameters: {
+          'status': 'ON_PROGRESS',
+          if (search != null && search.isNotEmpty) 'search': search,
+        },
+      );
+      final rawData = response.data;
+      final List<dynamic> items = rawData is List
+          ? rawData
+          : (rawData['data']?['items'] as List? ??
+              rawData['data'] as List? ??
+              []);
+      return items
+          .map((item) => SutmItemModel.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw ServerException(
+        message:
+            'Gagal mengambil daftar validasi SUTM pemeliharaan: ${e.toString()}',
+      );
+    }
+  }
+
+  @override
+  Future<bool> approvePemeliharaan({
+    required String role,
+    required int id,
+  }) async {
+    try {
+      await apiClient.patch(
+        '/gama/distribusi/max/pemeliharaan/$role/$id/approve',
+      );
+      return true;
+    } catch (e) {
+      throw ServerException(
+        message: 'Gagal menyetujui pemeliharaan: ${e.toString()}',
+      );
+    }
+  }
+
+  @override
+  Future<bool> rejectPemeliharaan({
+    required String role,
+    required int id,
+    required String reason,
+  }) async {
+    try {
+      await apiClient.patch(
+        '/gama/distribusi/max/pemeliharaan/$role/$id/reject',
+        data: {'reason': reason},
+      );
+      return true;
+    } catch (e) {
+      throw ServerException(
+        message: 'Gagal menolak pemeliharaan: ${e.toString()}',
+      );
+    }
+  }
+
+  @override
+  Future<bool> approveBulkPemeliharaan({
+    required String role,
+    required int workOrderId,
+    List<int>? ids,
+  }) async {
+    try {
+      await apiClient.patch(
+        '/gama/distribusi/max/pemeliharaan/$role/approve',
+        data: {
+          'workOrderId': workOrderId,
+          if (ids != null && ids.isNotEmpty) 'ids': ids,
+        },
+      );
+      return true;
+    } catch (e) {
+      throw ServerException(
+        message: 'Gagal menyetujui massal pemeliharaan: ${e.toString()}',
+      );
+    }
+  }
+
+  @override
+  Future<bool> rejectBulkPemeliharaan({
+    required String role,
+    required int workOrderId,
+    required String reason,
+    List<int>? ids,
+  }) async {
+    try {
+      await apiClient.patch(
+        '/gama/distribusi/max/pemeliharaan/$role/reject',
+        data: {
+          'workOrderId': workOrderId,
+          'reason': reason,
+          if (ids != null && ids.isNotEmpty) 'ids': ids,
+        },
+      );
+      return true;
+    } catch (e) {
+      throw ServerException(
+        message: 'Gagal menolak massal pemeliharaan: ${e.toString()}',
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> getPenilaianHistory({
+    required String type,
+    int? cursor,
+    int? bulan,
+    int? tahun,
+  }) async {
+    try {
+      final response = await apiClient.get(
+        '/gama/distribusi/max/performa-$type/petugas/mobile/score/history',
+        queryParameters: {
+          'cursor': ?cursor,
+          'bulan': ?bulan,
+          'tahun': ?tahun,
+        },
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      throw ServerException(
+        message: 'Gagal mengambil riwayat penilaian: ${e.toString()}',
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> getPenilaianDetailHistory({
+    required String type,
+    required String timeSet,
+    int? bulan,
+    int? tahun,
+  }) async {
+    try {
+      final response = await apiClient.get(
+        '/gama/distribusi/max/performa-$type/petugas/mobile/score/history/detail',
+        queryParameters: {
+          'timeSet': timeSet,
+          'bulan': ?bulan,
+          'tahun': ?tahun,
+        },
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      throw ServerException(
+        message: 'Gagal mengambil detail riwayat penilaian: ${e.toString()}',
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> getPenilaianDetailChart({
+    required String type,
+    required String timeSet,
+    int? bulan,
+    int? tahun,
+  }) async {
+    try {
+      final response = await apiClient.get(
+        '/gama/distribusi/max/performa-$type/petugas/mobile/score/history/detail-chart',
+        queryParameters: {
+          'timeSet': timeSet,
+          'bulan': ?bulan,
+          'tahun': ?tahun,
+        },
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      throw ServerException(
+        message: 'Gagal mengambil detail chart penilaian: ${e.toString()}',
       );
     }
   }

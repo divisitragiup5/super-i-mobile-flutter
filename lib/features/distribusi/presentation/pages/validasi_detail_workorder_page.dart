@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/route_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/models/sutm_workorder_model.dart';
 
@@ -85,10 +87,36 @@ class ValidasiDetailWorkorderPage extends StatelessWidget {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: ListTile(
-                    title: Text(item.nama,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('${item.idAsset} • Status: ${item.status}'),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    clipBehavior: Clip.antiAlias,
+                    child: ListTile(
+                      title: Text(item.nama,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text('${item.idAsset} • Status: ${item.status}'),
+                      trailing: const Icon(Icons.arrow_forward_ios,
+                          size: 16, color: Colors.grey),
+                      onTap: () {
+                        context.push(
+                          AppRoutes.detailSutm,
+                          extra: {
+                            'workOrderSutmItemId': item.id.toString(),
+                            'sutmId': item.sutmId.toString(),
+                            'idAsset': item.idAsset,
+                            'nama': item.nama,
+                            'feederName': item.feeder?.nama ?? item.feederName ?? '-',
+                            'latitude': item.latitude?.toString() ?? '',
+                            'longitude': item.longitude?.toString() ?? '',
+                            'workOrderId': workOrder.id.toString(),
+                            'inspectionId': item.inspectionId ??
+                                item.lastInspeksi?.id?.toString(),
+                            'status': item.status,
+                            'mode': 'validate',
+                          },
+                        );
+                      },
+                    ),
                   ),
                 );
               }),

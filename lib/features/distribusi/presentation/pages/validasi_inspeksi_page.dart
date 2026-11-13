@@ -345,34 +345,58 @@ class _ValidasiInspeksiPageState extends State<ValidasiInspeksiPage> {
                     },
                   ),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.idAsset,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                  child: InkWell(
+                    onTap: () async {
+                      await context.push(
+                        AppRoutes.detailSutm,
+                        extra: {
+                          'workOrderSutmItemId': item.id.toString(),
+                          'sutmId': item.sutmId.toString(),
+                          'idAsset': item.idAsset,
+                          'nama': item.nama,
+                          'feederName': item.feeder?.nama ?? item.feederName ?? '-',
+                          'latitude': item.latitude?.toString() ?? '',
+                          'longitude': item.longitude?.toString() ?? '',
+                          'workOrderId': item.workOrderId?.toString() ?? '',
+                          'inspectionId': item.inspectionId ??
+                              item.lastInspeksi?.id?.toString(),
+                          'status': item.status,
+                          'mode': 'validate',
+                        },
+                      );
+                      if (context.mounted) {
+                        context.read<ValidasiInspeksiCubit>().loadValidasiData();
+                      }
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.idAsset,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.nama,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                        const SizedBox(height: 2),
+                        Text(
+                          item.nama,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Status: ${item.status}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey,
+                        const SizedBox(height: 4),
+                        Text(
+                          'Status: ${item.status}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 if (item.canValidasi && inspId > 0)

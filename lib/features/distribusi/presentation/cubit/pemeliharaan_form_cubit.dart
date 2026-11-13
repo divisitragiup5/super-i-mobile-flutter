@@ -60,6 +60,7 @@ class PemeliharaanFormCubit extends Cubit<PemeliharaanFormState> {
         sub: r.sub,
         komponen: r.komponen,
         fasa: r.fasa,
+        nilaiAwal: r.nilai,
         jumlah: r.jumlah,
         status: 'TERLAKSANA',
       );

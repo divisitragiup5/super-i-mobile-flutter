@@ -36,6 +36,11 @@ abstract class SutmRepository {
     required int id,
     required String reason,
   });
+  Future<Either<Failure, Map<String, dynamic>>> validateInspeksi({
+    required String role,
+    required int id,
+    required FormData formData,
+  });
   Future<Either<Failure, bool>> approveBulkInspeksi({
     required String role,
     required List<int> inspeksiIds,
@@ -63,6 +68,36 @@ abstract class SutmRepository {
     String? reason,
   });
 
+  Future<Either<Failure, List<dynamic>>> getRiwayatInspeksiChart();
+  Future<Either<Failure, List<dynamic>>> getRiwayatPemeliharaanChart();
+
+  Future<Either<Failure, Map<String, dynamic>>> getRiwayatPemeliharaanDetail(
+      String workOrderSutmItemId);
+  Future<Either<Failure, List<SutmWorkOrderItem>>>
+      getValidasiPemeliharaanWorkOrderList({String? search});
+  Future<Either<Failure, List<SutmItemModel>>>
+      getValidasiPemeliharaanSutmList({String? search});
+  Future<Either<Failure, bool>> approvePemeliharaan({
+    required String role,
+    required int id,
+  });
+  Future<Either<Failure, bool>> rejectPemeliharaan({
+    required String role,
+    required int id,
+    required String reason,
+  });
+  Future<Either<Failure, bool>> approveBulkPemeliharaan({
+    required String role,
+    required int workOrderId,
+    List<int>? ids,
+  });
+  Future<Either<Failure, bool>> rejectBulkPemeliharaan({
+    required String role,
+    required int workOrderId,
+    required String reason,
+    List<int>? ids,
+  });
+
   Future<Either<Failure, List<YantekAssetModel>>> getYantekMapAssets(
       YantekFilterParams params);
   Future<Either<Failure, LastInspeksiModel?>> getLastInspeksiAsset(
@@ -80,5 +115,23 @@ abstract class SutmRepository {
       getDistribusiPerformanceDetail({
     required String type,
     required String id,
+  });
+  Future<Either<Failure, Map<String, dynamic>>> getPenilaianHistory({
+    required String type,
+    int? cursor,
+    int? bulan,
+    int? tahun,
+  });
+  Future<Either<Failure, Map<String, dynamic>>> getPenilaianDetailHistory({
+    required String type,
+    required String timeSet,
+    int? bulan,
+    int? tahun,
+  });
+  Future<Either<Failure, Map<String, dynamic>>> getPenilaianDetailChart({
+    required String type,
+    required String timeSet,
+    int? bulan,
+    int? tahun,
   });
 }

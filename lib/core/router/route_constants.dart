@@ -129,4 +129,10 @@ class AppRoutes {
   static const String dataIl1Sipil = '/data-il1-sipil';
   static const String inputIl1Sipil = '/input-il1-sipil';
   static const String updateIl1Sipil = '/update-il1-sipil';
+
+  // Aliases for camelCase consistency
+  static const String detailWorkOrderToday = detailWorkorderToday;
+  static const String detailWorkOrderPemeliharaanToday = detailWorkorderPemeliharaanToday;
 }
+
+typedef RouteConstants = AppRoutes;

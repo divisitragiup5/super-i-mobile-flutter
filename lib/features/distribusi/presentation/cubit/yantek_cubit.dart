@@ -75,6 +75,15 @@ class YantekCubit extends Cubit<YantekState> {
     );
   }
 
+  Future<void> fetchMapAssets(YantekFilterParams params) async {
+    emit(YantekLoading());
+    final result = await repository.getYantekMapAssets(params);
+    result.fold(
+      (failure) => emit(YantekError(message: failure.message)),
+      (assets) => emit(YantekLoaded(assets: assets)),
+    );
+  }
+
   Future<void> selectAsset(YantekAssetModel asset) async {
     if (state is! YantekLoaded) return;
     final current = state as YantekLoaded;

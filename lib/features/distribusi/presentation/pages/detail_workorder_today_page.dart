@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/route_constants.dart';
 import '../../../../core/storage/local_database.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/field_map_viewer.dart';
+import '../../../../core/widgets/google_sutm_map_card.dart';
 import '../../data/models/sutm_workorder_model.dart';
 import '../cubit/wo_inspeksi_cubit.dart';
 
@@ -117,17 +117,17 @@ class _DetailWorkorderTodayPageState extends State<DetailWorkorderTodayPage> {
 
   @override
   Widget build(BuildContext context) {
-    final mapPins = _currentWO.items
+    final sutmItems = _currentWO.items
         .where((i) => i.latitude != null && i.longitude != null)
-        .map((i) => MapPinItem(
-              id: i.id.toString(),
-              title: i.nama,
-              subtitle: i.idAsset,
-              latitude: i.latitude!,
-              longitude: i.longitude!,
+        .map((i) => SutmMapItem(
+              idAsset: i.idAsset,
+              name: i.nama,
+              latitude: i.latitude,
+              longitude: i.longitude,
               color: i.status == 'COMPLETED'
                   ? AppColors.success
                   : AppColors.primary,
+              rawData: i,
             ))
         .toList();
 
@@ -251,13 +251,10 @@ class _DetailWorkorderTodayPageState extends State<DetailWorkorderTodayPage> {
                 const SizedBox(height: 16),
 
                 // Map View Card
-                if (mapPins.isNotEmpty) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: FieldMapViewer(
-                      pins: mapPins,
-                      height: 200,
-                    ),
+                if (sutmItems.isNotEmpty) ...[
+                  GoogleSutmMapCard(
+                    items: sutmItems,
+                    height: 250,
                   ),
                   const SizedBox(height: 16),
                 ],
